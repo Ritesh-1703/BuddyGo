@@ -35,11 +35,11 @@ class SplashScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 120,
-              height: 120,
+              width: 280,
+              height: 280,
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(30),
+                shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.2),
@@ -48,10 +48,8 @@ class SplashScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.travel_explore,
-                size: 60,
-                color: Color(0xFF7B61FF),
+              child: ClipOval(
+                  child: Image.asset('lib/assets/images/Logo.png')
               ),
             ),
             const SizedBox(height: 30),

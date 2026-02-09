@@ -44,8 +44,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     children: [
                       Container(
-                        width: 100,
-                        height: 100,
+                        width: 300,
+                        height: 300,
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [Color(0xFF7B61FF), Color(0xFF9E8AFF)],
@@ -56,15 +56,13 @@ class _LoginScreenState extends State<LoginScreen> {
                           boxShadow: [
                             BoxShadow(
                               color: const Color(0xFF7B61FF).withOpacity(0.3),
-                              blurRadius: 20,
-                              spreadRadius: 2,
+                              blurRadius: 40,
+                              spreadRadius: 5,
                             ),
                           ],
                         ),
-                        child: const Icon(
-                          Icons.travel_explore,
-                          size: 48,
-                          color: Colors.white,
+                        child: ClipOval(
+                          child: Image.asset('lib/assets/images/Logo4.png'),
                         ),
                       ),
                       const SizedBox(height: 32),
@@ -174,9 +172,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: Divider(
-                        color: Colors.grey.withOpacity(0.3),
-                      ),
+                      child: Divider(color: Colors.grey.withOpacity(0.3)),
                     ),
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 16),
@@ -189,9 +185,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     Expanded(
-                      child: Divider(
-                        color: Colors.grey.withOpacity(0.3),
-                      ),
+                      child: Divider(color: Colors.grey.withOpacity(0.3)),
                     ),
                   ],
                 ),
@@ -275,9 +269,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       const Text(
                         "Don't have an account? ",
-                        style: TextStyle(
-                          color: Color(0xFF6E7A8A),
-                        ),
+                        style: TextStyle(color: Color(0xFF6E7A8A)),
                       ),
                       GestureDetector(
                         onTap: () {
