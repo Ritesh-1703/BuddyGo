@@ -92,7 +92,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Add Trip Cover Photo',
+                        'Add Trip Cover Photo in jpg Format',
                         style: TextStyle(
                           color: Colors.grey[600],
                           fontWeight: FontWeight.w600,

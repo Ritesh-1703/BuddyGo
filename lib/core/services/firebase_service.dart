@@ -144,12 +144,34 @@ class FirebaseService {
   }
 
   // Image Upload
+  // Future<String> uploadImage(String userId, String filePath) async {
+  //   final fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
+  //   final ref = _storage.ref().child('users/$userId/$fileName');
+  //   final uploadTask = await ref.putFile(File(filePath));
+  //   return await uploadTask.ref.getDownloadURL();
+  // }
+
   Future<String> uploadImage(String userId, String filePath) async {
-    final fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
-    final ref = _storage.ref().child('users/$userId/$fileName');
-    final uploadTask = await ref.putFile(File(filePath));
-    return await uploadTask.ref.getDownloadURL();
+    final file = File(filePath);
+
+    if (!file.existsSync()) {
+      throw Exception('Selected image file does not exist');
+    }
+
+    final fileName = 'trip_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+    final ref = FirebaseStorage.instance
+        .ref()
+        .child('trips')
+        .child(userId)
+        .child(fileName);
+
+    final snapshot = await ref.putFile(file);
+    final url = await snapshot.ref.getDownloadURL();
+    return url;
   }
+
+
 
   // Chat Operations
   Future<void> sendMessage({
