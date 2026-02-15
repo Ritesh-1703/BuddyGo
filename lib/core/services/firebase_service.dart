@@ -94,21 +94,52 @@ class FirebaseService {
     return trips;
   }
 
+
+  Future<List<Trip>> getTripsJoinedByUser(String userId) async {
+    final snapshot = await tripsCollection
+        .where('memberIds', arrayContains: userId)
+        .get();
+
+    final trips = snapshot.docs
+        .map((doc) => Trip.fromJson(doc.data() as Map<String, dynamic>))
+        .toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    return trips;
+  }
+
+
   Future<void> joinTrip(String tripId, String userId) async {
     final tripRef = tripsCollection.doc(tripId);
     await _firestore.runTransaction((transaction) async {
       final tripDoc = await transaction.get(tripRef);
-      if (tripDoc.exists) {
-        final currentMembers = tripDoc['currentMembers'] ?? 0;
-        final maxMembers = tripDoc['maxMembers'] ?? 1;
+      if (!tripDoc.exists) throw Exception('Trip not found');
 
-        if (currentMembers < maxMembers) {
-          transaction.update(tripRef, {
-            'currentMembers': currentMembers + 1,
-            'memberIds': FieldValue.arrayUnion([userId]),
-          });
-        }
+      final data = tripDoc.data() as Map<String, dynamic>;
+
+      final currentMembers = (data['currentMembers'] ?? 0) as int;
+      final maxMembers = (data['maxMembers'] ?? 1) as int;
+      final members = List<String>.from(data['memberIds'] ?? []);
+
+      if (members.contains(userId)) {
+        throw Exception('You already joined this trip');
       }
+
+      if (currentMembers >= maxMembers) {
+        throw Exception('Trip is full');
+      }
+
+      transaction.update(tripRef, {
+        'currentMembers': currentMembers + 1,
+        'memberIds': FieldValue.arrayUnion([userId]),
+      });
+        // if (currentMembers < maxMembers) {
+        //   transaction.update(tripRef, {
+        //     'currentMembers': currentMembers + 1,
+        //     'memberIds': FieldValue.arrayUnion([userId]),
+        //   });
+        // }
+
     });
   }
 

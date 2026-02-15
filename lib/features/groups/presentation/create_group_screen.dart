@@ -9,6 +9,7 @@ import 'package:buddygoapp/core/widgets/custom_textfield.dart';
 import 'package:buddygoapp/features/auth/presentation/auth_controller.dart';
 import 'package:buddygoapp/features/discovery/data/trip_model.dart';
 
+
 class CreateGroupScreen extends StatefulWidget {
   const CreateGroupScreen({super.key});
 

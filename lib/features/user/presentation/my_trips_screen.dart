@@ -7,6 +7,8 @@ import 'package:buddygoapp/features/auth/presentation/auth_controller.dart';
 import 'package:buddygoapp/features/discovery/data/trip_model.dart';
 import 'package:buddygoapp/features/groups/presentation/group_chat_screen.dart';
 
+import '../../groups/presentation/create_group_screen.dart';
+
 class MyTripsScreen extends StatefulWidget {
   const MyTripsScreen({super.key});
 
@@ -52,16 +54,16 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
 
   Widget _buildUpcomingTrips(String? userId) {
     return FutureBuilder<List<Trip>>(
-      future: userId != null ? _firebaseService.getTripsByUser(userId) : null,
+      future: userId != null ? _firebaseService.getTripsJoinedByUser(userId) : null,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
 
         final trips = snapshot.data ?? [];
-        final upcomingTrips = trips;
-            // .where((trip) => trip.startDate.isAfter(DateTime.now()))
-            // .toList();
+        final upcomingTrips = trips
+            .where((trip) => trip.startDate.isAfter(DateTime.now()))
+            .toList();
 
         return _buildTripList(upcomingTrips);
       },
@@ -70,16 +72,16 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
 
   Widget _buildPastTrips(String? userId) {
     return FutureBuilder<List<Trip>>(
-      future: userId != null ? _firebaseService.getTripsByUser(userId) : null,
+      future: userId != null ? _firebaseService.getTripsJoinedByUser(userId) : null,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
 
         final trips = snapshot.data ?? [];
-        final pastTrips = trips;
-            // .where((trip) => trip.endDate.isBefore(DateTime.now()))
-            // .toList();
+        final pastTrips = trips
+            .where((trip) => trip.endDate.isBefore(DateTime.now()))
+            .toList();
 
         return _buildTripList(pastTrips);
       },
@@ -128,7 +130,12 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
             const SizedBox(height: 30),
             ElevatedButton(
               onPressed: () {
-                // Navigate to create trip
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CreateGroupScreen(),
+                  ),
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF7B61FF),
