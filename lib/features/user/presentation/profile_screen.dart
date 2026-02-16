@@ -90,7 +90,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       user?.email ?? 'No email provided',
                       style: const TextStyle(
                         fontSize: 14,
-                        color: Color(0xFF6E7A8A),
+                        color: Color(0xFF3B4343),
                       ),
                     ),
                     const SizedBox(height: 16),
