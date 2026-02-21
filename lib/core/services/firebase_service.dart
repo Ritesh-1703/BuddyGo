@@ -6,6 +6,8 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:buddygoapp/features/discovery/data/trip_model.dart';
 import 'package:buddygoapp/features/user/data/user_model.dart';
 
+import '../../features/groups/data/group_model.dart';
+
 class FirebaseService {
   static final FirebaseService _instance = FirebaseService._internal();
   factory FirebaseService() => _instance;
@@ -171,9 +173,17 @@ class FirebaseService {
     return url;
   }
 
+  // Add to FirebaseService class
+  Future<void> updateGroupLastMessage(String groupId, String message, String sender) async {
+    await groupsCollection.doc(groupId).update({
+      'lastMessage': message,
+      'lastSender': sender,
+      'lastMessageTime': FieldValue.serverTimestamp(),
+      'lastActivityAt': FieldValue.serverTimestamp(),
+    });
+  }
 
-
-  // Chat Operations
+// Also update your sendMessage method to call this
   Future<void> sendMessage({
     required String groupId,
     required String userId,
@@ -190,6 +200,9 @@ class FirebaseService {
       'timestamp': FieldValue.serverTimestamp(),
       'readBy': [userId],
     });
+
+    // Update group's last message
+    await updateGroupLastMessage(groupId, text, userName);
   }
 
   Stream<List<Map<String, dynamic>>> getChatMessages(String groupId) {
@@ -227,6 +240,176 @@ class FirebaseService {
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
+
+  // Group Operations
+  Future<String> createGroup(GroupModel group) async {
+    final docRef = await groupsCollection.add(group.toJson());
+    await groupsCollection.doc(docRef.id).update({'id': docRef.id});
+    return docRef.id;
+  }
+
+  Stream<List<GroupModel>> getGroupsStream() {
+    return groupsCollection
+        .where('isActive', isEqualTo: true)
+        .orderBy('lastActivityAt', descending: true)
+        .snapshots()
+        .handleError((error) {
+      print('Groups stream error: $error');
+      return Stream.value([]);
+    })
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        try {
+          final data = doc.data() as Map<String, dynamic>;
+          return GroupModel.fromJson({
+            ...data,
+            'id': doc.id,
+          });
+        } catch (e) {
+          print('Error parsing group ${doc.id}: $e');
+          return null;
+        }
+      }).where((group) => group != null).cast<GroupModel>().toList();
+    });
+  }
+
+  Future<GroupModel?> getGroupById(String groupId) async {
+    try {
+      final doc = await groupsCollection.doc(groupId).get();
+      if (!doc.exists) return null;
+
+      final data = doc.data() as Map<String, dynamic>;
+      return GroupModel.fromJson({
+        ...data,
+        'id': doc.id,
+      });
+    } catch (e) {
+      print('Error getting group: $e');
+      return null;
+    }
+  }
+
+  Future<void> updateGroup(String groupId, Map<String, dynamic> updates) async {
+    await groupsCollection.doc(groupId).update(updates);
+  }
+
+  Future<void> joinGroup(String groupId, String userId, String userName, {String? message}) async {
+    final groupRef = groupsCollection.doc(groupId);
+
+    await _firestore.runTransaction((transaction) async {
+      final groupDoc = await transaction.get(groupRef);
+      if (!groupDoc.exists) throw Exception('Group not found');
+
+      final data = groupDoc.data() as Map<String, dynamic>;
+      final group = GroupModel.fromJson({...data, 'id': groupDoc.id});
+
+      if (group.isBlocked(userId)) {
+        throw Exception('You are blocked from this group');
+      }
+
+      if (group.isMember(userId)) {
+        throw Exception('Already a member');
+      }
+
+      if (!group.hasVacancy()) {
+        throw Exception('Group is full');
+      }
+
+      if (group.isJoinApprovalRequired) {
+        // Add to pending requests
+        final request = JoinRequest(
+          userId: userId,
+          userName: userName,
+          message: message ?? 'I want to join this trip',
+        );
+
+        transaction.update(groupRef, {
+          'pendingRequests': FieldValue.arrayUnion([request.toJson()]),
+        });
+      } else {
+        // Direct join
+        transaction.update(groupRef, {
+          'memberIds': FieldValue.arrayUnion([userId]),
+          'currentMembers': group.currentMembers + 1,
+          'memberRoles.$userId': 'member',
+          'lastActivityAt': FieldValue.serverTimestamp(),
+        });
+      }
+    });
+  }
+
+  Future<void> approveJoinRequest(String groupId, String userId) async {
+    final groupRef = groupsCollection.doc(groupId);
+
+    await _firestore.runTransaction((transaction) async {
+      final groupDoc = await transaction.get(groupRef);
+      if (!groupDoc.exists) throw Exception('Group not found');
+
+      final data = groupDoc.data() as Map<String, dynamic>;
+      final pendingRequests = List<Map<String, dynamic>>.from(data['pendingRequests'] ?? []);
+
+      // Remove request from pending
+      final updatedRequests = pendingRequests.where((req) => req['userId'] != userId).toList();
+
+      // Add user to members
+      transaction.update(groupRef, {
+        'pendingRequests': updatedRequests,
+        'memberIds': FieldValue.arrayUnion([userId]),
+        'currentMembers': (data['currentMembers'] ?? 0) + 1,
+        'memberRoles.$userId': 'member',
+        'lastActivityAt': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
+  Future<void> rejectJoinRequest(String groupId, String userId) async {
+    final groupRef = groupsCollection.doc(groupId);
+
+    await _firestore.runTransaction((transaction) async {
+      final groupDoc = await transaction.get(groupRef);
+      if (!groupDoc.exists) throw Exception('Group not found');
+
+      final data = groupDoc.data() as Map<String, dynamic>;
+      final pendingRequests = List<Map<String, dynamic>>.from(data['pendingRequests'] ?? []);
+
+      // Remove request from pending
+      final updatedRequests = pendingRequests.where((req) => req['userId'] != userId).toList();
+
+      transaction.update(groupRef, {
+        'pendingRequests': updatedRequests,
+      });
+    });
+  }
+
+  Future<void> leaveGroup(String groupId, String userId) async {
+    final groupRef = groupsCollection.doc(groupId);
+
+    await _firestore.runTransaction((transaction) async {
+      final groupDoc = await transaction.get(groupRef);
+      if (!groupDoc.exists) throw Exception('Group not found');
+
+      final data = groupDoc.data() as Map<String, dynamic>;
+      final currentMembers = data['currentMembers'] ?? 0;
+
+      transaction.update(groupRef, {
+        'memberIds': FieldValue.arrayRemove([userId]),
+        'currentMembers': currentMembers - 1,
+        'lastActivityAt': FieldValue.serverTimestamp(),
+      });
+
+      // If last member leaves, deactivate group
+      if (currentMembers - 1 <= 0) {
+        transaction.update(groupRef, {
+          'isActive': false,
+        });
+      }
+    });
+  }
+
+
+
+
+
 
   // Get current user ID
   String? get currentUserId => _auth.currentUser?.uid;

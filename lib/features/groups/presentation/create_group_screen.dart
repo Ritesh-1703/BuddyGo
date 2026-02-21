@@ -9,6 +9,7 @@ import 'package:buddygoapp/core/widgets/custom_textfield.dart';
 import 'package:buddygoapp/features/auth/presentation/auth_controller.dart';
 import 'package:buddygoapp/features/discovery/data/trip_model.dart';
 
+import '../data/group_model.dart';
 
 class CreateGroupScreen extends StatefulWidget {
   const CreateGroupScreen({super.key});
@@ -76,30 +77,30 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                     borderRadius: BorderRadius.circular(16),
                     image: _selectedImage != null
                         ? DecorationImage(
-                      image: FileImage(_selectedImage!),
-                      fit: BoxFit.cover,
-                    )
+                            image: FileImage(_selectedImage!),
+                            fit: BoxFit.cover,
+                          )
                         : null,
                   ),
                   child: _selectedImage == null
                       ? Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.add_photo_alternate,
-                        size: 48,
-                        color: Colors.grey[400],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Add Trip Cover Photo in jpg Format',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  )
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.add_photo_alternate,
+                              size: 48,
+                              color: Colors.grey[400],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Add Trip Cover Photo in jpg Format',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        )
                       : null,
                 ),
               ),
@@ -157,9 +158,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Colors.grey[300]!,
-                              ),
+                              border: Border.all(color: Colors.grey[300]!),
                             ),
                             child: Row(
                               children: [
@@ -171,8 +170,9 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                                 const SizedBox(width: 12),
                                 Text(
                                   _startDate != null
-                                      ? DateFormat('MMM dd, yyyy')
-                                      .format(_startDate!)
+                                      ? DateFormat(
+                                          'MMM dd, yyyy',
+                                        ).format(_startDate!)
                                       : 'Select date',
                                   style: TextStyle(
                                     color: _startDate != null
@@ -211,9 +211,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Colors.grey[300]!,
-                              ),
+                              border: Border.all(color: Colors.grey[300]!),
                             ),
                             child: Row(
                               children: [
@@ -225,8 +223,9 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                                 const SizedBox(width: 12),
                                 Text(
                                   _endDate != null
-                                      ? DateFormat('MMM dd, yyyy')
-                                      .format(_endDate!)
+                                      ? DateFormat(
+                                          'MMM dd, yyyy',
+                                        ).format(_endDate!)
                                       : 'Select date',
                                   style: TextStyle(
                                     color: _endDate != null
@@ -330,7 +329,9 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                     },
                     selectedColor: const Color(0xFF7B61FF),
                     labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : const Color(0xFF6E7A8A),
+                      color: isSelected
+                          ? Colors.white
+                          : const Color(0xFF6E7A8A),
                       fontWeight: FontWeight.w600,
                     ),
                   );
@@ -429,7 +430,6 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     if (_formKey.currentState!.validate() &&
         _startDate != null &&
         _endDate != null) {
-
       if (_startDate!.isAfter(_endDate!)) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -446,28 +446,29 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         final authController = context.read<AuthController>();
         final user = authController.currentUser;
 
-        if (user == null) {
-          throw Exception('User not logged in');
-        }
+        if (user == null) throw Exception('User not logged in');
 
         final firebaseService = FirebaseService();
         String? imageUrl;
 
-        // Upload image if selected
+        // 1️⃣ Upload image (once)
         if (_selectedImage != null) {
-          imageUrl = await firebaseService.uploadImage(user.id, _selectedImage!.path);
+          imageUrl = await firebaseService.uploadImage(
+            user.id,
+            _selectedImage!.path,
+          );
         }
 
-        // Create trip object
+        // 2️⃣ Create Trip model
         final trip = Trip(
-          id: '', // Will be set by Firebase
+          id: '',
           title: _titleController.text.trim(),
           description: _descriptionController.text.trim(),
           destination: _destinationController.text.trim(),
           startDate: _startDate!,
           endDate: _endDate!,
           maxMembers: int.parse(_maxMembersController.text),
-          currentMembers: 1, // Host is first member
+          currentMembers: 1,
           budget: double.parse(_budgetController.text),
           hostId: user.id,
           hostName: user.name ?? 'Anonymous',
@@ -477,31 +478,68 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
           isPublic: _groupType == 'public',
         );
 
-        // Save to Firebase
+        // 3️⃣ Save Trip
         final tripId = await firebaseService.createTrip(trip);
 
-        // Update user's trip count
-        await authController.updateProfile();
+        // 4️⃣ Create Group linked to Trip
+        final newGroup = GroupModel(
+          id: '',
+          name: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+          coverImage: imageUrl,
+          createdBy: user.id,
+          createdByName: user.name ?? 'Anonymous',
+          createdByImage: user.photoUrl,
+          type: _groupType == 'public' ? GroupType.public : GroupType.private,
+          maxMembers: int.parse(_maxMembersController.text),
+          currentMembers: 1,
+          memberIds: [user.id],
+          memberRoles: {user.id: MemberRole.admin},
+          adminIds: [user.id],
+          destination: _destinationController.text.trim(),
+          startDate: _startDate,
+          endDate: _endDate,
+          budget: double.parse(_budgetController.text),
+          tags: _selectedTags,
+          interests: _selectedTags,
+          isJoinApprovalRequired: _groupType == 'private',
+          isChatEnabled: true,
+          isLocationSharingEnabled: true,
+          isMemberListPublic: true,
+          totalMessages: 0,
+          totalPhotos: 0,
+          totalEvents: 0,
+          averageRating: 5.0,
+          pendingRequests: [],
+          lastActivityAt: DateTime.now(),
+          isActive: true,
+          isDeleted: false,
+          tripId: tripId, // 🔗 link group to trip (add this field in model)
+        );
+
+        // 5️⃣ Save Group
+        final docRef = await firebaseService.groupsCollection.add(
+          newGroup.toJson(),
+        );
+        await firebaseService.groupsCollection.doc(docRef.id).update({
+          'id': docRef.id,
+        });
 
         setState(() => _isLoading = false);
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Trip created successfully!'),
+            content: Text('Trip & Group created successfully! 🎉'),
             backgroundColor: Color(0xFF00D4AA),
           ),
         );
 
-        // Navigate back after delay
-        Future.delayed(const Duration(seconds: 1), () {
-          Navigator.pop(context);
-        });
-
+        Navigator.pop(context, true);
       } catch (e) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error creating trip: ${e.toString()}'),
+            content: Text('Error creating trip: $e'),
             backgroundColor: const Color(0xFFFF647C),
           ),
         );
