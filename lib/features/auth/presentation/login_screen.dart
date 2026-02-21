@@ -1,3 +1,4 @@
+import 'package:buddygoapp/features/auth/presentation/admin_login_screen.dart';
 import 'package:buddygoapp/features/auth/presentation/phone_login_screen.dart';
 import 'package:buddygoapp/features/auth/presentation/register_screen.dart';
 import 'package:flutter/material.dart';
@@ -35,7 +36,12 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 // Back Button
                 IconButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () => Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AdminLoginScreen(),
+                    ),
+                  ),
                   icon: const Icon(Icons.arrow_back),
                 ),
                 const SizedBox(height: 20),
