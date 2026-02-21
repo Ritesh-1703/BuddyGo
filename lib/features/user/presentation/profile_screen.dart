@@ -1,3 +1,7 @@
+import 'package:buddygoapp/features/groups/presentation/chat_list_screen.dart';
+import 'package:buddygoapp/features/groups/presentation/group_chat_screen.dart';
+import 'package:buddygoapp/features/safety/presentation/report_screen.dart';
+import 'package:buddygoapp/features/user/presentation/my_trips_screen.dart';
 import 'package:buddygoapp/features/user/presentation/settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -54,8 +58,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               : user?.photoUrl != null
                               ? NetworkImage(user!.photoUrl!)
                               : const AssetImage(
-                              'assets/images/default_avatar.png')
-                          as ImageProvider,
+                                      'assets/images/default_avatar.png',
+                                    )
+                                    as ImageProvider,
                         ),
                         Positioned(
                           bottom: 0,
@@ -156,17 +161,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildMenuItem(
                     icon: Icons.travel_explore,
                     title: 'My Trips',
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const MyTripsScreen(),
+                        ),
+                      );
+                    },
                   ),
                   _buildMenuItem(
                     icon: Icons.group_outlined,
                     title: 'My Groups',
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ChatListScreen()
+                        ),
+                      );
+                    },
                   ),
                   _buildMenuItem(
                     icon: Icons.security_outlined,
                     title: 'Privacy & Safety',
-                    onTap: () {},
+                    onTap: () {
+
+                    },
                   ),
                   _buildMenuItem(
                     icon: Icons.help_outline,
@@ -202,7 +223,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Navigator.pushNamedAndRemoveUntil(
                       context,
                       '/login',
-                          (route) => false,
+                      (route) => false,
                     );
                   }
                 },
@@ -229,10 +250,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(height: 4),
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Color(0xFF6E7A8A),
-          ),
+          style: const TextStyle(fontSize: 12, color: Color(0xFF6E7A8A)),
         ),
       ],
     );
@@ -250,10 +268,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           color: const Color(0xFF7B61FF).withOpacity(0.1),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(
-          icon,
-          color: const Color(0xFF7B61FF),
-        ),
+        child: Icon(icon, color: const Color(0xFF7B61FF)),
       ),
       title: Text(
         title,

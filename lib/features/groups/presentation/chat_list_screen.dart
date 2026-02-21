@@ -1,3 +1,4 @@
+import 'package:buddygoapp/features/groups/presentation/create_group_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
@@ -145,7 +146,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Create new chat
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const CreateGroupScreen(),
+            ),
+          );
         },
         backgroundColor: const Color(0xFF7B61FF),
         child: const Icon(Icons.message, color: Colors.white),
