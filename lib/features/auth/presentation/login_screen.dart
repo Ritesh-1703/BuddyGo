@@ -26,6 +26,18 @@ class _LoginScreenState extends State<LoginScreen> {
     final authController = Provider.of<AuthController>(context);
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Buddy Login'),
+        leading:IconButton(
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const AdminLoginScreen(),
+            ),
+          ),
+          icon: const Icon(Icons.arrow_back),
+        ),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
@@ -35,15 +47,6 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Back Button
-                IconButton(
-                  onPressed: () => Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AdminLoginScreen(),
-                    ),
-                  ),
-                  icon: const Icon(Icons.arrow_back),
-                ),
                 const SizedBox(height: 20),
                 // Logo & Welcome
                 Center(

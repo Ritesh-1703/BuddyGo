@@ -1,3 +1,4 @@
+import 'package:buddygoapp/features/auth/presentation/admin_login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -21,7 +22,30 @@ class _AdminDashboardState extends State<AdminDashboard> {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Admin Dashboard'),
+          title: Row(
+            children: [
+              Image.asset(
+                'lib/assets/images/AdminPanal.png',
+                height: 40,
+                width: 40,
+              ),
+              const Spacer(),
+              const Text('Admin Dashboard', style: TextStyle(fontSize: 18)),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.logout),
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AdminLoginScreen(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 8),
+            ],
+          ),
           bottom: TabBar(
             indicatorColor: const Color(0xFF7B61FF),
             labelColor: const Color(0xFF7B61FF),
@@ -55,9 +79,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         }
 
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(
-            child: Text('No reports found'),
-          );
+          return const Center(child: Text('No reports found'));
         }
 
         final reports = snapshot.data!.docs;
@@ -166,10 +188,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           // Recent Activity
           const Text(
             'Recent Activity',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 16),
           _buildActivityList(),
@@ -213,10 +232,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             const SizedBox(height: 12),
             Text(
               title,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
           ],
         ),
@@ -275,10 +291,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         ),
         child: Icon(icon, color: color, size: 20),
       ),
-      title: Text(
-        title,
-        style: const TextStyle(fontWeight: FontWeight.w600),
-      ),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
       subtitle: Text(subtitle),
       trailing: Text(
         time,
@@ -336,10 +349,7 @@ class ReportCard extends StatelessWidget {
                 const Spacer(),
                 Text(
                   DateFormat('MMM dd, h:mm a').format(date),
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
               ],
             ),
@@ -347,20 +357,14 @@ class ReportCard extends StatelessWidget {
             // Reason
             Text(
               'Reason: ${data['reason']}',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             // Details
             if (data['details'] != null)
               Text(
                 data['details'],
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[700],
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
               ),
             const SizedBox(height: 16),
             // Actions
@@ -416,13 +420,9 @@ class ReportCard extends StatelessWidget {
   }
 
   Future<void> _updateReportStatus(String status) async {
-    await FirebaseFirestore.instance
-        .collection('reports')
-        .doc(reportId)
-        .update({
-      'status': status,
-      'resolvedAt': FieldValue.serverTimestamp(),
-    });
+    await FirebaseFirestore.instance.collection('reports').doc(reportId).update(
+      {'status': status, 'resolvedAt': FieldValue.serverTimestamp()},
+    );
   }
 }
 
@@ -472,10 +472,7 @@ class UserCard extends StatelessWidget {
                       ),
                       Text(
                         data['email'] ?? '',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                       ),
                     ],
                   ),
@@ -490,7 +487,10 @@ class UserCard extends StatelessWidget {
               children: [
                 _buildUserStat('Trips', '${data['totalTrips'] ?? 0}'),
                 _buildUserStat('Rating', '${data['rating'] ?? 5}/5'),
-                _buildUserStat('Reports', '${data['reportedUsers']?.length ?? 0}'),
+                _buildUserStat(
+                  'Reports',
+                  '${data['reportedUsers']?.length ?? 0}',
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -568,18 +568,9 @@ class UserCard extends StatelessWidget {
       children: [
         Text(
           value,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-          ),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
         ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-          ),
-        ),
+        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
       ],
     );
   }

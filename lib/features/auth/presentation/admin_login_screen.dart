@@ -1,3 +1,4 @@
+import 'package:buddygoapp/features/auth/presentation/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:buddygoapp/core/widgets/custom_button.dart';
@@ -26,18 +27,26 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin Login'),
-      ),
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => Navigator.pop(context),
+        )
+
+        ),
+
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Form(
           key: _formKey,
           child: ListView(
             children: [
-              const Icon(
-                Icons.admin_panel_settings,
-                size: 80,
-                color: Color(0xFF7B61FF),
+
+              Image.asset(
+                'lib/assets/images/AdminPanal.png',
+                width: double.infinity,
+                height: 400,
               ),
+
               const SizedBox(height: 32),
               const Text(
                 'Admin Access Only',
