@@ -156,12 +156,24 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
         return TripCard(
           trip: trips[index],
           showHost: showHost,
-          onChat: () {
+          onChat: () async {
+            final groupId = await _firebaseService.getGroupIdByTripId(trips[index].id);
+
+            if (groupId == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Group not found for this trip'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              return;
+            }
+
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => GroupChatScreen(
-                  groupId: trips[index].id,
+                  groupId: groupId,
                   groupName: trips[index].title,
                 ),
               ),

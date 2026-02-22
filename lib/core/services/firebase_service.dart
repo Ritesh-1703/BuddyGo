@@ -525,6 +525,15 @@ class FirebaseService {
     });
   }
 
+  Future<String?> getGroupIdByTripId(String tripId) async {
+    final query = await groupsCollection
+        .where('tripId', isEqualTo: tripId)
+        .limit(1)
+        .get();
+
+    if (query.docs.isEmpty) return null;
+    return query.docs.first.id;
+  }
 
 
 
