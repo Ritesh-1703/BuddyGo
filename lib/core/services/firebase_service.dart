@@ -110,18 +110,19 @@ class FirebaseService {
     return trips;
   }
 
-
-  Future<void> joinTrip(String tripId, String userId) async {
+  Future<void> joinTrip(String tripId, String userId, String userName) async {
     final tripRef = tripsCollection.doc(tripId);
+
     await _firestore.runTransaction((transaction) async {
+      // 1️⃣ Get Trip
       final tripDoc = await transaction.get(tripRef);
       if (!tripDoc.exists) throw Exception('Trip not found');
 
-      final data = tripDoc.data() as Map<String, dynamic>;
+      final tripData = tripDoc.data() as Map<String, dynamic>;
 
-      final currentMembers = (data['currentMembers'] ?? 0) as int;
-      final maxMembers = (data['maxMembers'] ?? 1) as int;
-      final members = List<String>.from(data['memberIds'] ?? []);
+      final currentMembers = (tripData['currentMembers'] ?? 0) as int;
+      final maxMembers = (tripData['maxMembers'] ?? 1) as int;
+      final members = List<String>.from(tripData['memberIds'] ?? []);
 
       if (members.contains(userId)) {
         throw Exception('You already joined this trip');
@@ -131,10 +132,87 @@ class FirebaseService {
         throw Exception('Trip is full');
       }
 
+      // 2️⃣ Update Trip
       transaction.update(tripRef, {
         'currentMembers': currentMembers + 1,
         'memberIds': FieldValue.arrayUnion([userId]),
       });
+
+      // 3️⃣ Find related Group by tripId
+      final groupQuery = await groupsCollection
+          .where('tripId', isEqualTo: tripId)
+          .limit(1)
+          .get();
+
+      if (groupQuery.docs.isEmpty) {
+        throw Exception('Group for this trip not found');
+      }
+
+      final groupDoc = groupQuery.docs.first;
+      final groupRef = groupsCollection.doc(groupDoc.id);
+      final groupData = groupDoc.data() as Map<String, dynamic>;
+
+      final group = GroupModel.fromJson({...groupData, 'id': groupDoc.id});
+
+      // 4️⃣ Join Group Logic
+      if (group.isBlocked(userId)) {
+        throw Exception('You are blocked from this group');
+      }
+
+      if (group.isMember(userId)) {
+        return; // Already in group
+      }
+
+      if (!group.hasVacancy()) {
+        throw Exception('Group is full');
+      }
+
+      if (group.isJoinApprovalRequired) {
+        final request = JoinRequest(
+          userId: userId,
+          userName: userName,
+          message: 'I want to join this trip',
+        );
+
+        transaction.update(groupRef, {
+          'pendingRequests': FieldValue.arrayUnion([request.toJson()]),
+        });
+      } else {
+        transaction.update(groupRef, {
+          'memberIds': FieldValue.arrayUnion([userId]),
+          'currentMembers': group.currentMembers + 1,
+          'memberRoles.$userId': 'member',
+          'lastActivityAt': FieldValue.serverTimestamp(),
+        });
+      }
+    });
+  }
+
+
+  // Future<void> joinTrip(String tripId, String userId) async {
+  //   final tripRef = tripsCollection.doc(tripId);
+  //   await _firestore.runTransaction((transaction) async {
+  //     final tripDoc = await transaction.get(tripRef);
+  //     if (!tripDoc.exists) throw Exception('Trip not found');
+  //
+  //     final data = tripDoc.data() as Map<String, dynamic>;
+  //
+  //     final currentMembers = (data['currentMembers'] ?? 0) as int;
+  //     final maxMembers = (data['maxMembers'] ?? 1) as int;
+  //     final members = List<String>.from(data['memberIds'] ?? []);
+  //
+  //     if (members.contains(userId)) {
+  //       throw Exception('You already joined this trip');
+  //     }
+  //
+  //     if (currentMembers >= maxMembers) {
+  //       throw Exception('Trip is full');
+  //     }
+  //
+  //     transaction.update(tripRef, {
+  //       'currentMembers': currentMembers + 1,
+  //       'memberIds': FieldValue.arrayUnion([userId]),
+  //     });
         // if (currentMembers < maxMembers) {
         //   transaction.update(tripRef, {
         //     'currentMembers': currentMembers + 1,
@@ -142,8 +220,8 @@ class FirebaseService {
         //   });
         // }
 
-    });
-  }
+  //   });
+  // }
 
   // Image Upload
   // Future<String> uploadImage(String userId, String filePath) async {
@@ -406,6 +484,38 @@ class FirebaseService {
     });
   }
 
+  Stream<List<Trip>> getTripsStreamWithFilter(String filter) {
+    Query query = tripsCollection.orderBy('createdAt', descending: true);
+
+    final now = DateTime.now();
+
+    if (filter == 'Upcoming') {
+      // Includes both ongoing + upcoming (not past)
+      query = tripsCollection
+          .where('endDate', isGreaterThanOrEqualTo: now)
+          .orderBy('endDate')
+          .orderBy('createdAt', descending: true);
+    }
+    else if (filter == 'Popular') {
+      query = tripsCollection
+          .orderBy('currentMembers', descending: true)
+          .orderBy('createdAt', descending: true); // ✅ tie-breaker by latest
+    }
+    else if (filter == 'Budget') {
+      query = tripsCollection
+          .where('budget', isLessThanOrEqualTo: 10000)
+          .orderBy('budget')
+          .orderBy(
+          'createdAt', descending: true); // ✅ latest first inside budget
+    }
+
+    return query.snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return Trip.fromJson({...data, 'id': doc.id});
+      }).toList();
+    });
+  }
 
 
 

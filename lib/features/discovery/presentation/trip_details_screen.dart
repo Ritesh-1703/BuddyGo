@@ -1,8 +1,10 @@
+import 'package:buddygoapp/features/auth/presentation/auth_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:buddygoapp/features/discovery/data/trip_model.dart';
 import 'package:buddygoapp/core/services/firebase_service.dart';
+import 'package:provider/provider.dart';
 
 class TripDetailsScreen extends StatelessWidget {
   final Trip trip;
@@ -146,8 +148,10 @@ class TripDetailsScreen extends StatelessWidget {
                               ? () async {
                             final service = FirebaseService();
                             final userId = service.currentUserId;
+                            final auth = context.read<AuthController>();
+                            final user = auth.currentUser;
                             if (userId != null) {
-                              await service.joinTrip(trip.id, userId);
+                              await service.joinTrip(trip.id, userId, user!.name!);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(content: Text('Joined trip!')),
                               );

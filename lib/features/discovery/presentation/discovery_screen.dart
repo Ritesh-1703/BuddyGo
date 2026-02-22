@@ -7,6 +7,8 @@ import 'package:buddygoapp/core/services/firebase_service.dart';
 import 'package:buddygoapp/features/discovery/data/trip_model.dart';
 import 'package:buddygoapp/features/groups/presentation/create_group_screen.dart';
 
+import '../../auth/presentation/auth_controller.dart';
+
 class DiscoveryScreen extends StatefulWidget {
   const DiscoveryScreen({super.key});
 
@@ -168,7 +170,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
           // Real-time Trips List
           SliverToBoxAdapter(
             child: StreamBuilder<List<Trip>>(
-              stream: _firebaseService.getTripsStream(),
+              stream: _firebaseService.getTripsStreamWithFilter(_selectedFilter),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Padding(
@@ -186,7 +188,14 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
 
                 final trips = snapshot.data ?? [];
 
-                if (trips.isEmpty) {
+                // 🔍 Apply search filter locally
+                final query = _searchController.text.toLowerCase();
+                final filteredTrips = trips.where((trip) {
+                  return trip.title.toLowerCase().contains(query) ||
+                      trip.destination.toLowerCase().contains(query);
+                }).toList();
+
+                if (filteredTrips.isEmpty) {
                   return const Padding(
                     padding: EdgeInsets.all(32),
                     child: Column(
@@ -199,7 +208,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
                         ),
                         SizedBox(height: 8),
                         Text(
-                          'Be the first to create a trip!',
+                          'Try changing filters or search',
                           style: TextStyle(color: Colors.grey),
                         ),
                       ],
@@ -210,9 +219,9 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
                 return ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: trips.length,
+                  itemCount: filteredTrips.length,
                   itemBuilder: (context, index) {
-                    return TripCard(trip: trips[index]);
+                    return TripCard(trip: filteredTrips[index]);
                   },
                 );
               },
@@ -513,8 +522,10 @@ class TripCard extends StatelessWidget {
                           onPressed: seatsLeft > 0
                               ? () async {
                             final userId = firebaseService.currentUserId;
+                            final auth = context.read<AuthController>();
+                            final user = auth.currentUser;
                             if (userId != null) {
-                              await firebaseService.joinTrip(trip.id, userId);
+                              await firebaseService.joinTrip(trip.id, userId, user!.name!);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text('Successfully joined the trip!'),

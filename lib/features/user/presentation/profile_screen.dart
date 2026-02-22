@@ -1,6 +1,7 @@
 import 'package:buddygoapp/features/groups/presentation/chat_list_screen.dart';
 import 'package:buddygoapp/features/groups/presentation/group_chat_screen.dart';
 import 'package:buddygoapp/features/safety/presentation/report_screen.dart';
+import 'package:buddygoapp/features/user/presentation/edit_profile_screen.dart';
 import 'package:buddygoapp/features/user/presentation/my_trips_screen.dart';
 import 'package:buddygoapp/features/user/presentation/settings_screen.dart';
 import 'package:flutter/material.dart';
@@ -33,7 +34,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           IconButton(
             icon: const Icon(Icons.edit_outlined),
             onPressed: () {
-              // Navigate to edit profile
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const EditProfileScreen(),
+                ),
+              );
             },
           ),
         ],
@@ -156,7 +162,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildMenuItem(
                     icon: Icons.person_outline,
                     title: 'Edit Profile',
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const EditProfileScreen(),
+                        ),
+                      );
+                    },
                   ),
                   _buildMenuItem(
                     icon: Icons.travel_explore,

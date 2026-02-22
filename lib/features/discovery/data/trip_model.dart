@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Trip {
   final String id;
   final String title;
@@ -35,7 +37,7 @@ class Trip {
     required this.isPublic,
     DateTime? createdAt,
     this.updatedAt,
-  }) : createdAt = createdAt ?? DateTime(2024, 1, 1); // FIXED HERE
+  }) : createdAt = createdAt ?? DateTime.now(); // FIXED HERE
 
   factory Trip.fromJson(Map<String, dynamic> json) {
     return Trip(
