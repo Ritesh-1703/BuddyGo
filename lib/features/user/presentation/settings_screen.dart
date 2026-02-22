@@ -1,8 +1,14 @@
+import 'package:buddygoapp/features/auth/presentation/change_password_screen.dart';
+import 'package:buddygoapp/features/safety/presentation/privacy_policy_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:in_app_review/in_app_review.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:buddygoapp/core/widgets/custom_button.dart';
 import 'package:buddygoapp/features/auth/presentation/auth_controller.dart';
+
+import '../../safety/presentation/terms_services_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -19,7 +25,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _currency = 'INR (₹)';
 
   final List<String> _languages = ['English', 'Hindi', 'Spanish', 'French'];
-  final List<String> _currencies = ['INR (₹)', 'USD (\$)', 'EUR (€)', 'GBP (£)'];
+  final List<String> _currencies = [
+    'INR (₹)',
+    'USD (\$)',
+    'EUR (€)',
+    'GBP (£)',
+  ];
 
   @override
   void initState() {
@@ -48,6 +59,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Settings saved successfully!')),
+    );
+  }
+
+  final InAppReview _inAppReview = InAppReview.instance;
+
+  Future<void> _rateApp() async {
+    if (await _inAppReview.isAvailable()) {
+      await _inAppReview.requestReview();
+    } else {
+      await _inAppReview.openStoreListing();
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Thanks for supporting BuddyGo ❤️')),
+    );
+  }
+
+  void _shareApp() {
+    Share.share(
+      'Hey! 👋 Check out BuddyGo – an awesome app to find travel buddies and plan trips together!\n\n'
+      'Download now:\n'
+      '👉 https://play.google.com/store/apps/details?id=com.yourcompany.buddygoapp',
     );
   }
 
@@ -179,23 +212,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       title: const Text('Change Password'),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                       onTap: () {
-                        // Navigate to change password
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ChangePasswordScreen(),
+                          ),
+                        );
                       },
                     ),
                     ListTile(
-                      leading: const Icon(Icons.visibility_off, color: Color(0xFF7B61FF)),
+                      leading: const Icon(
+                        Icons.visibility_off,
+                        color: Color(0xFF7B61FF),
+                      ),
                       title: const Text('Privacy Policy'),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                       onTap: () {
-                        // Open privacy policy
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PrivacyPolicyScreen(),
+                          ),
+                        );
                       },
                     ),
                     ListTile(
-                      leading: const Icon(Icons.description, color: Color(0xFF7B61FF)),
+                      leading: const Icon(
+                        Icons.description,
+                        color: Color(0xFF7B61FF),
+                      ),
                       title: const Text('Terms of Service'),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                       onTap: () {
-                        // Open terms
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => TermsServicesScreen(),
+                          ),
+                        );
                       },
                     ),
                   ],
@@ -233,15 +287,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       title: const Text('Rate this App'),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                       onTap: () {
-                        // Open app store
+                        _rateApp();
                       },
                     ),
                     ListTile(
-                      leading: const Icon(Icons.share, color: Color(0xFF7B61FF)),
+                      leading: const Icon(
+                        Icons.share,
+                        color: Color(0xFF7B61FF),
+                      ),
                       title: const Text('Share with Friends'),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                       onTap: () {
-                        // Share app
+                        _shareApp();
                       },
                     ),
                   ],
@@ -288,9 +345,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 child: const SizedBox(
                   width: double.infinity,
-                  child: Center(
-                    child: Text('Delete Account'),
-                  ),
+                  child: Center(child: Text('Delete Account')),
                 ),
               ),
             ),
@@ -310,10 +365,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }) {
     return SwitchListTile(
       secondary: Icon(icon, color: const Color(0xFF7B61FF)),
-      title: Text(
-        title,
-        style: const TextStyle(fontWeight: FontWeight.w600),
-      ),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
       subtitle: Text(
         subtitle,
         style: TextStyle(color: Colors.grey[600], fontSize: 12),
@@ -333,18 +385,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }) {
     return ListTile(
       leading: Icon(icon, color: const Color(0xFF7B61FF)),
-      title: Text(
-        title,
-        style: const TextStyle(fontWeight: FontWeight.w600),
-      ),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
       trailing: DropdownButton<String>(
         value: value,
         underline: const SizedBox(),
         items: items.map((String item) {
-          return DropdownMenuItem<String>(
-            value: item,
-            child: Text(item),
-          );
+          return DropdownMenuItem<String>(value: item, child: Text(item));
         }).toList(),
         onChanged: onChanged,
       ),
@@ -358,7 +404,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: const Text('Delete Account'),
         content: const Text(
           'Are you sure you want to delete your account? '
-              'This action cannot be undone. All your data will be permanently deleted.',
+          'This action cannot be undone. All your data will be permanently deleted.',
         ),
         actions: [
           TextButton(

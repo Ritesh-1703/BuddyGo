@@ -1,6 +1,7 @@
 import 'package:buddygoapp/features/groups/presentation/chat_list_screen.dart';
 import 'package:buddygoapp/features/groups/presentation/group_chat_screen.dart';
 import 'package:buddygoapp/features/safety/presentation/help_support_screen.dart';
+import 'package:buddygoapp/features/safety/presentation/privacy_safety_screen.dart';
 import 'package:buddygoapp/features/safety/presentation/report_screen.dart';
 import 'package:buddygoapp/features/user/presentation/edit_profile_screen.dart';
 import 'package:buddygoapp/features/user/presentation/my_trips_screen.dart';
@@ -200,7 +201,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: Icons.security_outlined,
                     title: 'Privacy & Safety',
                     onTap: () {
-
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const PrivacySafetyScreen(),
+                        ),
+                      );
                     },
                   ),
                   _buildMenuItem(
