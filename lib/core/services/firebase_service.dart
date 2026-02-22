@@ -283,21 +283,29 @@ class FirebaseService {
     await updateGroupLastMessage(groupId, text, userName);
   }
 
-  Stream<List<Map<String, dynamic>>> getChatMessages(String groupId) {
+  // Stream<List<Map<String, dynamic>>> getChatMessages(String groupId) {
+  //   return chatsCollection
+  //       .where('groupId', isEqualTo: groupId)
+  //       .orderBy('timestamp', descending: false)
+  //       .snapshots()
+  //       .map((snapshot) => snapshot.docs
+  //       .map((doc) {
+  //     final data = doc.data() as Map<String, dynamic>;
+  //     return {
+  //       'id': doc.id,
+  //       ...data,
+  //       'timestamp': (data['timestamp'] as Timestamp).toDate(),
+  //     };
+  //   })
+  //       .toList());
+  // }
+
+  // Replace your existing getChatMessages method with this:
+  Stream<QuerySnapshot<Object?>> getChatMessages(String groupId) {
     return chatsCollection
         .where('groupId', isEqualTo: groupId)
         .orderBy('timestamp', descending: false)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-        .map((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-      return {
-        'id': doc.id,
-        ...data,
-        'timestamp': (data['timestamp'] as Timestamp).toDate(),
-      };
-    })
-        .toList());
+        .snapshots();
   }
 
   // Report Operations
