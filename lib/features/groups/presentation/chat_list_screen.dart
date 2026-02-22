@@ -56,10 +56,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
               // Implement search
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.more_vert),
-            onPressed: () {},
-          ),
+          IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
         ],
       ),
       body: Column(
@@ -124,9 +121,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         const SizedBox(height: 8),
                         Text(
                           'Join a trip or create one to start chatting',
-                          style: TextStyle(
-                            color: Colors.grey[500],
-                          ),
+                          style: TextStyle(color: Colors.grey[500]),
                         ),
                         const SizedBox(height: 24),
                         ElevatedButton(
@@ -160,10 +155,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     final data = doc.data() as Map<String, dynamic>;
 
                     // Parse the group data
-                    final group = GroupModel.fromJson({
-                      ...data,
-                      'id': doc.id,
-                    });
+                    final group = GroupModel.fromJson({...data, 'id': doc.id});
 
                     // Get last message info (you would get this from a subcollection)
                     // For now, using a placeholder
@@ -196,9 +188,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => const CreateGroupScreen(),
-            ),
+            MaterialPageRoute(builder: (context) => const CreateGroupScreen()),
           );
         },
         backgroundColor: const Color(0xFF7B61FF),
@@ -208,54 +198,87 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   Widget _buildOnlineUsersSection() {
-    if (_isLoading) {
-      return const SizedBox(
-        height: 100,
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
-
     return SizedBox(
       height: 100,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: 5, // You would get this from Firestore presence
-        itemBuilder: (context, index) {
-          return Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Column(
-              children: [
-                Stack(
+      child: StreamBuilder<QuerySnapshot>(
+        stream: _firebaseService.usersCollection.snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text('No users found'));
+          }
+
+          final users = snapshot.data!.docs;
+
+          return ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: users.length,
+            itemBuilder: (context, index) {
+              final data = users[index].data() as Map<String, dynamic>;
+
+              final name = data['name'] ?? 'User';
+              final photoUrl = data['photoUrl'];
+              // final defaultAvatar =
+              //     'https://ui-avatars.com/api/?name=${Uri.encodeComponent(name)}&background=7B61FF&color=ffffff&size=256';
+              return Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Column(
                   children: [
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundImage: CachedNetworkImageProvider(
-                        'https://randomuser.me/api/portraits/${index % 2 == 0 ? 'women' : 'men'}/${index + 1}.jpg',
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        width: 16,
-                        height: 16,
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
+                    Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 28,
+                          backgroundImage: photoUrl != null
+                              ? CachedNetworkImageProvider(photoUrl)
+                              : const NetworkImage(
+                                  'https://th.bing.com/th/id/OIP.0AKX_YJS6w3y215EcZ-WAAAAAA?w=151&h=180&c=7&r=0&o=7&dpr=1.3&pid=1.7&rm=3',
+                                ),
+                          child: photoUrl == null
+                              ? Text(
+                                  name.isNotEmpty ? name[0].toUpperCase() : '?',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF7B61FF),
+                                  ),
+                                )
+                              : null,
                         ),
+                        // Online indicator (temporary: always green)
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            width: 14,
+                            height: 14,
+                            decoration: BoxDecoration(
+                              color: Colors.green,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: 60,
+                      child: Text(
+                        name,
+                        style: const TextStyle(fontSize: 12),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  index == 0 ? 'You' : 'User ${index + 1}',
-                  style: const TextStyle(fontSize: 12),
-                ),
-              ],
-            ),
+              );
+            },
           );
         },
       ),
@@ -319,16 +342,16 @@ class ChatListItem extends StatelessWidget {
             radius: 28,
             backgroundImage: group.coverImage != null
                 ? CachedNetworkImageProvider(group.coverImage!)
-                : null,
+                :const AssetImage('lib/assets/images/logo1.png'),
             child: group.coverImage == null
                 ? Text(
-              group.name.isNotEmpty ? group.name[0].toUpperCase() : 'G',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF7B61FF),
-              ),
-            )
+                    group.name.isNotEmpty ? group.name[0].toUpperCase() : 'G',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF7B61FF),
+                    ),
+                  )
                 : null,
           ),
           // Online indicator (you would get this from presence system)
@@ -353,7 +376,9 @@ class ChatListItem extends StatelessWidget {
             child: Text(
               group.name,
               style: TextStyle(
-                fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
+                fontWeight: unreadCount > 0
+                    ? FontWeight.bold
+                    : FontWeight.normal,
                 fontSize: 16,
                 color: const Color(0xFF1A1D2B),
               ),
@@ -362,11 +387,10 @@ class ChatListItem extends StatelessWidget {
             ),
           ),
           Text(
-            _formatTime(lastMessage['timestamp'] as DateTime? ?? group.lastActivityAt),
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 12,
+            _formatTime(
+              lastMessage['timestamp'] as DateTime? ?? group.lastActivityAt,
             ),
+            style: TextStyle(color: Colors.grey[600], fontSize: 12),
           ),
         ],
       ),
@@ -394,7 +418,9 @@ class ChatListItem extends StatelessWidget {
               _getLastMessagePreview(),
               style: TextStyle(
                 color: unreadCount > 0 ? Colors.black : Colors.grey[600],
-                fontWeight: unreadCount > 0 ? FontWeight.w600 : FontWeight.normal,
+                fontWeight: unreadCount > 0
+                    ? FontWeight.w600
+                    : FontWeight.normal,
                 fontSize: 14,
               ),
               maxLines: 1,
@@ -409,10 +435,7 @@ class ChatListItem extends StatelessWidget {
         children: [
           Text(
             '${group.currentMembers} members',
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 12,
-            ),
+            style: TextStyle(color: Colors.grey[600], fontSize: 12),
           ),
           const SizedBox(height: 4),
           if (group.isAdmin(currentUserId))
