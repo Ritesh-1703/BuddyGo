@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:buddygoapp/core/services/firebase_service.dart';
 import 'package:buddygoapp/core/widgets/custom_button.dart';
+import '../data/report_model.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -110,6 +111,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text('No users found'));
         }
 
         final users = snapshot.data!.docs;
@@ -485,7 +490,23 @@ class UserCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildUserStat('Trips', '${data['totalTrips'] ?? 0}'),
+                // _buildUserStat('Trips', '${data['totalTrips'] ?? 0}'),
+                FutureBuilder<QuerySnapshot>(
+                  future: FirebaseFirestore.instance
+                      .collection('trips')
+                      .where('hostId', isEqualTo: userId)
+                      .get(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return _buildUserStat('Trips', '0');
+                    }
+
+                    return _buildUserStat(
+                      'Trips',
+                      snapshot.data!.docs.length.toString(),
+                    );
+                  },
+                ),
                 _buildUserStat('Rating', '${data['rating'] ?? 5}/5'),
                 _buildUserStat(
                   'Reports',

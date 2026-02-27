@@ -7,6 +7,7 @@ import 'package:buddygoapp/features/discovery/data/trip_model.dart';
 import 'package:buddygoapp/features/user/data/user_model.dart';
 
 import '../../features/groups/data/group_model.dart';
+import '../../features/safety/data/report_model.dart';
 
 class FirebaseService {
   static final FirebaseService _instance = FirebaseService._internal();
@@ -535,6 +536,90 @@ class FirebaseService {
     return query.docs.first.id;
   }
 
+
+// Add these methods to FirebaseService class
+
+  /// Submit a new report
+  Future<void> submitReport(ReportModel report) async {
+    try {
+      await reportsCollection.doc(report.id).set(report.toJson());
+    } catch (e) {
+      print('Error submitting report: $e');
+      rethrow;
+    }
+  }
+
+  /// Get reports stream for admin
+  Stream<List<ReportModel>> getReportsStream() {
+    return reportsCollection
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return ReportModel.fromJson({...data, 'id': doc.id});
+      }).toList();
+    });
+  }
+
+  /// Get reports by user
+  Future<List<ReportModel>> getReportsByUser(String userId) async {
+    try {
+      final snapshot = await reportsCollection
+          .where('reporterId', isEqualTo: userId)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return ReportModel.fromJson({...data, 'id': doc.id});
+      }).toList();
+    } catch (e) {
+      print('Error getting user reports: $e');
+      return [];
+    }
+  }
+
+  /// Update report status (admin only)
+  Future<void> updateReportStatus({
+    required String reportId,
+    required ReportStatus status,
+    String? adminNotes,
+    String? resolvedBy,
+  }) async {
+    try {
+      await reportsCollection.doc(reportId).update({
+        'status': status.name,
+        'adminNotes': adminNotes,
+        'resolvedBy': resolvedBy,
+        'resolvedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Error updating report status: $e');
+      rethrow;
+    }
+  }
+
+  /// Check if user has already reported another user for the same reason recently
+  Future<bool> hasUserReportedRecently({
+    required String reporterId,
+    required String reportedUserId,
+    Duration within = const Duration(hours: 24),
+  }) async {
+    try {
+      final cutoff = DateTime.now().subtract(within);
+      final snapshot = await reportsCollection
+          .where('reporterId', isEqualTo: reporterId)
+          .where('reportedUserId', isEqualTo: reportedUserId)
+          .where('createdAt', isGreaterThan: cutoff)
+          .get();
+
+      return snapshot.docs.isNotEmpty;
+    } catch (e) {
+      print('Error checking recent reports: $e');
+      return false; // Allow on error
+    }
+  }
 
 
 
