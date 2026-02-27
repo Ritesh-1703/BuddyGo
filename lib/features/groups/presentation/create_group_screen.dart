@@ -25,7 +25,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   final _destinationController = TextEditingController();
   final _budgetController = TextEditingController();
   final _maxMembersController = TextEditingController(text: '4');
-
+  final _imageUrlController = TextEditingController();
   DateTime? _startDate;
   DateTime? _endDate;
   File? _selectedImage;
@@ -45,6 +45,13 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     'Family',
     'Backpacking',
   ];
+  @override
+  void initState() {
+    super.initState();
+    _imageUrlController.addListener(() {
+      setState(() {});
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,43 +74,73 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Trip Image
-              GestureDetector(
-                onTap: _pickImage,
-                child: Container(
+              // GestureDetector(
+              //   onTap: _pickImage,
+              //   child: Container(
+              //     height: 200,
+              //     width: double.infinity,
+              //     decoration: BoxDecoration(
+              //       color: Colors.grey[100],
+              //       borderRadius: BorderRadius.circular(16),
+              //       image: _selectedImage != null
+              //           ? DecorationImage(
+              //               image: FileImage(_selectedImage!),
+              //               fit: BoxFit.cover,
+              //             )
+              //           : null,
+              //     ),
+              //     child: _selectedImage == null
+              //         ? Column(
+              //             mainAxisAlignment: MainAxisAlignment.center,
+              //             children: [
+              //               Icon(
+              //                 Icons.add_photo_alternate,
+              //                 size: 48,
+              //                 color: Colors.grey[400],
+              //               ),
+              //               const SizedBox(height: 8),
+              //               Text(
+              //                 'Add Trip Cover Photo in jpg Format',
+              //                 style: TextStyle(
+              //                   color: Colors.grey[600],
+              //                   fontWeight: FontWeight.w600,
+              //                 ),
+              //               ),
+              //             ],
+              //           )
+              //         : null,
+              //   ),
+              // ),
+              // Cover Image URL
+              CustomTextField(
+                controller: _imageUrlController,
+                label: 'Cover Image URL (jpg/png)',
+                hintText: 'Paste image URL from browser',
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter image URL';
+                  }
+                  if (!Uri.tryParse(value)!.isAbsolute) {
+                    return 'Enter valid image URL';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Preview Image
+              if (_imageUrlController.text.isNotEmpty)
+                Container(
                   height: 200,
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: Colors.grey[100],
                     borderRadius: BorderRadius.circular(16),
-                    image: _selectedImage != null
-                        ? DecorationImage(
-                            image: FileImage(_selectedImage!),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
+                    image: DecorationImage(
+                      image: NetworkImage(_imageUrlController.text.trim()),
+                      fit: BoxFit.cover,
+                    ),
                   ),
-                  child: _selectedImage == null
-                      ? Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.add_photo_alternate,
-                              size: 48,
-                              color: Colors.grey[400],
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Add Trip Cover Photo in jpg Format',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        )
-                      : null,
                 ),
-              ),
               const SizedBox(height: 24),
               // Trip Title
               CustomTextField(
@@ -252,7 +289,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                       label: 'Budget (₹) *',
                       hintText: '15000',
                       keyboardType: TextInputType.number,
-                      prefixIcon: const Icon(Icons.attach_money_outlined),
+                      prefixIcon: const Icon(Icons.currency_rupee),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter budget';
@@ -391,15 +428,15 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     );
   }
 
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final image = await picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      setState(() {
-        _selectedImage = File(image.path);
-      });
-    }
-  }
+  // Future<void> _pickImage() async {
+  //   final picker = ImagePicker();
+  //   final image = await picker.pickImage(source: ImageSource.gallery);
+  //   if (image != null) {
+  //     setState(() {
+  //       _selectedImage = File(image.path);
+  //     });
+  //   }
+  // }
 
   Future<void> _selectStartDate(BuildContext context) async {
     final picked = await showDatePicker(
@@ -449,15 +486,16 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         if (user == null) throw Exception('User not logged in');
 
         final firebaseService = FirebaseService();
-        String? imageUrl;
+        // String? imageUrl;
 
         // 1️⃣ Upload image (once)
-        if (_selectedImage != null) {
-          imageUrl = await firebaseService.uploadImage(
-            user.id,
-            _selectedImage!.path,
-          );
-        }
+        // if (_selectedImage != null) {
+        //   imageUrl = await firebaseService.uploadImage(
+        //     user.id,
+        //     _selectedImage!.path,
+        //   );
+        // }
+        final imageUrl = _imageUrlController.text.trim();
 
         // 2️⃣ Create Trip model
         final trip = Trip(
@@ -473,7 +511,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
           hostId: user.id,
           hostName: user.name ?? 'Anonymous',
           hostImage: user.photoUrl ?? '',
-          images: imageUrl != null ? [imageUrl] : [],
+          // images: imageUrl != null ? [imageUrl] : [],
+          images: imageUrl.isNotEmpty ? [imageUrl] : [],
           tags: _selectedTags,
           isPublic: _groupType == 'public',
         );
