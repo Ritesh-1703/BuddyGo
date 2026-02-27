@@ -6,12 +6,14 @@ import 'package:buddygoapp/features/safety/presentation/report_screen.dart';
 import 'package:buddygoapp/features/user/presentation/edit_profile_screen.dart';
 import 'package:buddygoapp/features/user/presentation/my_trips_screen.dart';
 import 'package:buddygoapp/features/user/presentation/settings_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:buddygoapp/core/widgets/custom_button.dart';
 import 'package:buddygoapp/features/auth/presentation/auth_controller.dart';
+import 'package:buddygoapp/core/services/firebase_service.dart'; // ADD THIS IMPORT
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -22,6 +24,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final ImagePicker _picker = ImagePicker();
+  final FirebaseService _firebaseService = FirebaseService(); // ADD THIS
   String? _selectedImageUrl;
 
   @override
@@ -66,9 +69,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               : user?.photoUrl != null
                               ? NetworkImage(user!.photoUrl!)
                               : const AssetImage(
-                                      'assets/images/default_avatar.png',
-                                    )
-                                    as ImageProvider,
+                              'assets/images/default_avatar.png')
+                          as ImageProvider,
                         ),
                         Positioned(
                           bottom: 0,
@@ -107,34 +109,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // Verification Badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF00D4AA).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.verified,
-                            size: 16,
-                            color: Color(0xFF00D4AA),
+
+                    // 🔥 CHANGED: Dynamic Verification Badge with StreamBuilder
+                    StreamBuilder<DocumentSnapshot>(
+                      stream: _firebaseService.usersCollection.doc(user?.id).snapshots(),
+                      builder: (context, snapshot) {
+                        bool isVerified = false;
+
+                        if (snapshot.hasData && snapshot.data!.exists) {
+                          final userData = snapshot.data!.data() as Map<String, dynamic>?;
+                          isVerified = userData?['isVerifiedTraveler'] == true;
+                        }
+
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
                           ),
-                          SizedBox(width: 8),
-                          Text(
-                            'Verified Traveler',
-                            style: TextStyle(
-                              color: Color(0xFF00D4AA),
-                              fontWeight: FontWeight.w600,
-                            ),
+                          decoration: BoxDecoration(
+                            color: isVerified
+                                ? const Color(0xFF00D4AA).withOpacity(0.1)
+                                : Colors.grey.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
                           ),
-                        ],
-                      ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isVerified ? Icons.verified : Icons.verified_outlined,
+                                size: 16,
+                                color: isVerified
+                                    ? const Color(0xFF00D4AA)
+                                    : Colors.grey,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                isVerified ? 'Verified Traveler' : 'Not Verified',
+                                style: TextStyle(
+                                  color: isVerified
+                                      ? const Color(0xFF00D4AA)
+                                      : Colors.grey,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -192,7 +213,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const ChatListScreen()
+                          builder: (context) => const ChatListScreen(),
                         ),
                       );
                     },
@@ -213,12 +234,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: Icons.help_outline,
                     title: 'Help & Support',
                     onTap: () {
-                      Navigator.push(context, 
-                      MaterialPageRoute(builder: (context)=> HelpSupportScreen())
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => HelpSupportScreen(),
+                        ),
                       );
                     },
                   ),
-                  // In profile_screen.dart, add to menu items:
                   _buildMenuItem(
                     icon: Icons.settings,
                     title: 'Settings',
@@ -247,7 +270,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Navigator.pushNamedAndRemoveUntil(
                       context,
                       '/login',
-                      (route) => false,
+                          (route) => false,
                     );
                   }
                 },
@@ -314,7 +337,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
       setState(() {
-        // In real app, upload to Firebase Storage
         _selectedImageUrl = image.path;
       });
     }

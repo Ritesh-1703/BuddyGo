@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -37,7 +38,9 @@ class _AdminUserProfileScreenState extends State<AdminUserProfileScreen> {
 
     try {
       // Get user profile
-      final userDoc = await _firebaseService.usersCollection.doc(widget.userId).get();
+      final userDoc = await _firebaseService.usersCollection
+          .doc(widget.userId)
+          .get();
       if (userDoc.exists) {
         _userData = userDoc.data() as Map<String, dynamic>;
       }
@@ -61,11 +64,77 @@ class _AdminUserProfileScreenState extends State<AdminUserProfileScreen> {
       _userTrips = tripsSnapshot.docs
           .map((doc) => {'id': doc.id, ...doc.data() as Map<String, dynamic>})
           .toList();
-
     } catch (e) {
       print('Error loading user data: $e');
     } finally {
       setState(() => _isLoading = false);
+    }
+  }
+
+  // 🔥 ADD THIS METHOD - It was missing in your file
+  Future<void> _toggleVerifiedBadge() async {
+    final currentStatus = _userData?['isVerifiedTraveler'] ?? false;
+    final newStatus = !currentStatus;
+
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(newStatus ? 'Verify User' : 'Remove Verification'),
+        content: Text(
+          newStatus
+              ? 'Are you sure you want to mark this user as a Verified Traveler?'
+              : 'Are you sure you want to remove the Verified Traveler badge from this user?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: newStatus ? Colors.green : Colors.red,
+            ),
+            child: Text(newStatus ? 'Verify' : 'Remove'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      // Update in Firestore
+      await _firebaseService.usersCollection.doc(widget.userId).update({
+        'isVerifiedTraveler': newStatus,
+        'verifiedAt': newStatus ? FieldValue.serverTimestamp() : null,
+        'verifiedBy': newStatus ? FirebaseAuth.instance.currentUser?.uid : null,
+      });
+
+      // Update local state
+      setState(() {
+        _userData!['isVerifiedTraveler'] = newStatus;
+      });
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            newStatus
+                ? '✅ User is now a Verified Traveler!'
+                : '❌ Verified badge removed successfully',
+          ),
+          backgroundColor: newStatus ? Colors.green : Colors.orange,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error updating verification status: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -83,16 +152,13 @@ class _AdminUserProfileScreenState extends State<AdminUserProfileScreen> {
               itemBuilder: (context) => [
                 const PopupMenuItem(
                   value: 'warn',
-                  child: Text('Send Warning'),
+                  child: Text('⚠️ Send Warning'),
                 ),
                 const PopupMenuItem(
                   value: 'suspend',
-                  child: Text('Suspend Account'),
+                  child: Text('⛔ Suspend Account'),
                 ),
-                const PopupMenuItem(
-                  value: 'ban',
-                  child: Text('Ban User'),
-                ),
+                const PopupMenuItem(value: 'ban', child: Text('🚫 Ban User')),
               ],
               onSelected: (value) {
                 switch (value) {
@@ -115,111 +181,229 @@ class _AdminUserProfileScreenState extends State<AdminUserProfileScreen> {
           : _userData == null
           ? const Center(child: Text('User not found'))
           : SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Profile Header
-            _buildProfileHeader(),
-            const SizedBox(height: 24),
-
-            // User Details
-            _buildSection('User Details', [
-              _buildInfoRow('User ID', widget.userId),
-              _buildInfoRow('Email', _userData!['email'] ?? 'N/A'),
-              _buildInfoRow('Phone', _userData!['phone'] ?? 'N/A'),
-              _buildInfoRow('Location', _userData!['location'] ?? 'N/A'),
-              _buildInfoRow('Bio', _userData!['bio'] ?? 'No bio'),
-            ]),
-            const SizedBox(height: 16),
-
-            // Verification Status
-            _buildSection('Verification Status', [
-              _buildVerificationItem('Email', _userData!['isEmailVerified'] == true),
-              _buildVerificationItem('Phone', _userData!['isPhoneVerified'] == true),
-              _buildVerificationItem('Student', _userData!['isStudentVerified'] == true),
-            ]),
-            const SizedBox(height: 16),
-
-            // Stats
-            _buildSection('Statistics', [
-              _buildStatRow('Total Trips', '${_userData!['totalTrips'] ?? 0}'),
-              _buildStatRow('Reports Filed', '${_userReports.length}'),
-              _buildStatRow('Rating', '${_userData!['rating'] ?? 5}/5'),
-              _buildStatRow('Joined', _formatDate(_userData!['createdAt'])),
-            ]),
-            const SizedBox(height: 16),
-
-            // Recent Reports
-            if (_userReports.isNotEmpty) ...[
-              _buildSection('Recent Reports', _userReports.map((report) {
-                return ListTile(
-                  leading: const Icon(Icons.warning, color: Colors.orange),
-                  title: Text(report['reason'] ?? 'Unknown'),
-                  subtitle: Text('Status: ${report['status'] ?? 'pending'}'),
-                  trailing: Text(_formatTimestamp(report['createdAt'])),
-                );
-              }).toList()),
-            ],
-
-            const SizedBox(height: 16),
-
-            // Recent Trips
-            if (_userTrips.isNotEmpty) ...[
-              _buildSection('Recent Trips', _userTrips.map((trip) {
-                return ListTile(
-                  leading: const Icon(Icons.travel_explore, color: Colors.green),
-                  title: Text(trip['title'] ?? 'Untitled'),
-                  subtitle: Text(trip['destination'] ?? 'Unknown'),
-                  trailing: Text('${trip['currentMembers'] ?? 0}/${trip['maxMembers'] ?? 0}'),
-                );
-              }).toList()),
-            ],
-
-            const SizedBox(height: 24),
-
-            // Admin Actions
-            if (widget.isAdmin) ...[
-              const Text(
-                'Admin Actions',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: CustomButton(
-                      text: 'Warn User',
-                      backgroundColor: Colors.orange,
-                      onPressed: _showWarningDialog,
+                  // Profile Header
+                  _buildProfileHeader(),
+                  const SizedBox(height: 16),
+
+                  // 🔥 Verified Badge Toggle Section
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            (_userData?['isVerifiedTraveler'] == true
+                                    ? const Color(0xFF00D4AA)
+                                    : Colors.grey)
+                                .withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(30),
+                        border: Border.all(
+                          color: _userData?['isVerifiedTraveler'] == true
+                              ? const Color(0xFF00D4AA)
+                              : Colors.grey,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _userData?['isVerifiedTraveler'] == true
+                                ? Icons.verified
+                                : Icons.verified_outlined,
+                            color: _userData?['isVerifiedTraveler'] == true
+                                ? const Color(0xFF00D4AA)
+                                : Colors.grey,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _userData?['isVerifiedTraveler'] == true
+                                ? 'Verified Traveler'
+                                : 'Not Verified',
+                            style: TextStyle(
+                              color: _userData?['isVerifiedTraveler'] == true
+                                  ? const Color(0xFF00D4AA)
+                                  : Colors.grey,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Container(
+                            height: 30,
+                            width: 1,
+                            color: Colors.grey.withOpacity(0.3),
+                          ),
+                          const SizedBox(width: 12),
+                          InkWell(
+                            onTap: _toggleVerifiedBadge,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _userData?['isVerifiedTraveler'] == true
+                                    ? Colors.red.withOpacity(0.1)
+                                    : const Color(0xFF00D4AA).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                _userData?['isVerifiedTraveler'] == true
+                                    ? 'Remove Badge'
+                                    : 'Add Badge',
+                                style: TextStyle(
+                                  color:
+                                      _userData?['isVerifiedTraveler'] == true
+                                      ? Colors.red
+                                      : const Color(0xFF00D4AA),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: CustomButton(
-                      text: 'Suspend',
+                  const SizedBox(height: 24),
+
+                  // User Details
+                  _buildSection('📋 User Details', [
+                    _buildInfoRow('User ID', widget.userId),
+                    _buildInfoRow('Email', _userData!['email'] ?? 'N/A'),
+                    _buildInfoRow('Phone', _userData!['phone'] ?? 'N/A'),
+                    _buildInfoRow('Location', _userData!['location'] ?? 'N/A'),
+                    _buildInfoRow('Bio', _userData!['bio'] ?? 'No bio'),
+                  ]),
+                  const SizedBox(height: 16),
+
+                  // Verification Status
+                  _buildSection('✅ Verification Status', [
+                    _buildVerificationItem(
+                      'Email',
+                      _userData!['isEmailVerified'] == true,
+                    ),
+                    _buildVerificationItem(
+                      'Phone',
+                      _userData!['isPhoneVerified'] == true,
+                    ),
+                    _buildVerificationItem(
+                      'Student',
+                      _userData!['isStudentVerified'] == true,
+                    ),
+                  ]),
+                  const SizedBox(height: 16),
+
+                  // Stats
+                  _buildSection('📊 Statistics', [
+                    _buildStatRow(
+                      'Total Trips',
+                      '${_userData!['totalTrips'] ?? 0}',
+                    ),
+                    _buildStatRow('Reports Filed', '${_userReports.length}'),
+                    _buildStatRow('Rating', '${_userData!['rating'] ?? 5}/5'),
+                    _buildStatRow(
+                      'Joined',
+                      _formatDate(_userData!['createdAt']),
+                    ),
+                  ]),
+                  const SizedBox(height: 16),
+
+                  // Recent Reports
+                  if (_userReports.isNotEmpty) ...[
+                    _buildSection(
+                      '⚠️ Recent Reports',
+                      _userReports.map((report) {
+                        return ListTile(
+                          leading: const Icon(
+                            Icons.warning,
+                            color: Colors.orange,
+                          ),
+                          title: Text(report['reason'] ?? 'Unknown'),
+                          subtitle: Text(
+                            'Status: ${report['status'] ?? 'pending'}',
+                          ),
+                          trailing: Text(_formatTimestamp(report['createdAt'])),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+
+                  const SizedBox(height: 16),
+
+                  // Recent Trips
+                  if (_userTrips.isNotEmpty) ...[
+                    _buildSection(
+                      '✈️ Recent Trips',
+                      _userTrips.map((trip) {
+                        return ListTile(
+                          leading: const Icon(
+                            Icons.travel_explore,
+                            color: Colors.green,
+                          ),
+                          title: Text(trip['title'] ?? 'Untitled'),
+                          subtitle: Text(trip['destination'] ?? 'Unknown'),
+                          trailing: Text(
+                            '${trip['currentMembers'] ?? 0}/${trip['maxMembers'] ?? 0}',
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+
+                  const SizedBox(height: 24),
+
+                  // Admin Actions
+                  if (widget.isAdmin) ...[
+                    const Text(
+                      '🔨 Admin Actions',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: CustomButton(
+                            text: 'Warn User',
+                            backgroundColor: Colors.orange,
+                            onPressed: _showWarningDialog,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: CustomButton(
+                            text: 'Suspend',
+                            backgroundColor: Colors.red,
+                            onPressed: _showSuspendDialog,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    CustomButton(
+                      text: 'Delete Account',
                       backgroundColor: Colors.red,
-                      onPressed: _showSuspendDialog,
+                      onPressed: _showDeleteDialog,
                     ),
-                  ),
+                  ],
                 ],
               ),
-              const SizedBox(height: 8),
-              CustomButton(
-                text: 'Delete Account',
-                backgroundColor: Colors.red,
-                onPressed: _showDeleteDialog,
-              ),
-            ],
-          ],
-        ),
-      ),
+            ),
     );
   }
 
+  // 🔥 Helper Methods (All existing ones stay the same)
   Widget _buildProfileHeader() {
     return Center(
       child: Column(
@@ -231,25 +415,19 @@ class _AdminUserProfileScreenState extends State<AdminUserProfileScreen> {
                 : null,
             child: _userData!['photoUrl'] == null
                 ? Text(
-              _userData!['name']?[0].toUpperCase() ?? '?',
-              style: const TextStyle(fontSize: 30),
-            )
+                    _userData!['name']?[0].toUpperCase() ?? '?',
+                    style: const TextStyle(fontSize: 30),
+                  )
                 : null,
           ),
           const SizedBox(height: 16),
           Text(
             _userData!['name'] ?? 'Unknown User',
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
-            ),
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
           ),
           Text(
             _userData!['email'] ?? '',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
           ),
         ],
       ),
@@ -265,10 +443,7 @@ class _AdminUserProfileScreenState extends State<AdminUserProfileScreen> {
           children: [
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
             ...children,
@@ -293,9 +468,7 @@ class _AdminUserProfileScreenState extends State<AdminUserProfileScreen> {
               ),
             ),
           ),
-          Expanded(
-            child: Text(value),
-          ),
+          Expanded(child: Text(value)),
         ],
       ),
     );
@@ -332,12 +505,7 @@ class _AdminUserProfileScreenState extends State<AdminUserProfileScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label),
-          Text(
-            value,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
         ],
       ),
     );
@@ -369,6 +537,7 @@ class _AdminUserProfileScreenState extends State<AdminUserProfileScreen> {
     return '';
   }
 
+  // Dialog Methods
   void _showWarningDialog() {
     final TextEditingController reasonController = TextEditingController();
 
@@ -405,9 +574,7 @@ class _AdminUserProfileScreenState extends State<AdminUserProfileScreen> {
                 ),
               );
             },
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.orange,
-            ),
+            style: TextButton.styleFrom(foregroundColor: Colors.orange),
             child: const Text('Send Warning'),
           ),
         ],
@@ -436,9 +603,7 @@ class _AdminUserProfileScreenState extends State<AdminUserProfileScreen> {
                 ),
               );
             },
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
-            ),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Suspend'),
           ),
         ],
@@ -451,7 +616,9 @@ class _AdminUserProfileScreenState extends State<AdminUserProfileScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Ban User'),
-        content: const Text('Are you sure you want to permanently ban this user?'),
+        content: const Text(
+          'Are you sure you want to permanently ban this user?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -467,9 +634,7 @@ class _AdminUserProfileScreenState extends State<AdminUserProfileScreen> {
                 ),
               );
             },
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
-            ),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Ban'),
           ),
         ],
@@ -500,9 +665,7 @@ class _AdminUserProfileScreenState extends State<AdminUserProfileScreen> {
                 ),
               );
             },
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
-            ),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Delete'),
           ),
         ],

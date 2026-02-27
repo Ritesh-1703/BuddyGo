@@ -21,6 +21,7 @@ class UserModel {
   final int rating;
   final int totalTrips;
   final int totalReviews;
+  bool isVerifiedTraveler;
 
   UserModel({
     required this.id,
@@ -43,6 +44,7 @@ class UserModel {
     this.rating = 5,
     this.totalTrips = 0,
     this.totalReviews = 0,
+    this.isVerifiedTraveler = false,
   })  : blockedUsers = blockedUsers ?? [],
         reportedUsers = reportedUsers ?? [],
         createdAt = createdAt ?? DateTime.now();
@@ -79,6 +81,7 @@ class UserModel {
       rating: json['rating'] ?? 5,
       totalTrips: json['totalTrips'] ?? 0,
       totalReviews: json['totalReviews'] ?? 0,
+      isVerifiedTraveler: json['isVerifiedTraveler'] ?? false,
     );
   }
 
@@ -104,6 +107,7 @@ class UserModel {
       'rating': rating,
       'totalTrips': totalTrips,
       'totalReviews': totalReviews,
+      'isVerifiedTraveler': isVerifiedTraveler,
     };
   }
 
@@ -124,6 +128,8 @@ class UserModel {
     int? rating,
     int? totalTrips,
     int? totalReviews,
+    bool? isVerifiedTraveler,
+    DateTime? createdAt,
   }) {
     return UserModel(
       id: id,
@@ -146,6 +152,7 @@ class UserModel {
       rating: rating ?? this.rating,
       totalTrips: totalTrips ?? this.totalTrips,
       totalReviews: totalReviews ?? this.totalReviews,
+      isVerifiedTraveler: isVerifiedTraveler ?? this.isVerifiedTraveler,
     );
   }
 }
