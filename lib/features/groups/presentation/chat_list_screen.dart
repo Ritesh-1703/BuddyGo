@@ -18,21 +18,11 @@ class ChatListScreen extends StatefulWidget {
 
 class _ChatListScreenState extends State<ChatListScreen> {
   final FirebaseService _firebaseService = FirebaseService();
-  final List<Map<String, dynamic>> _onlineUsers = [];
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadOnlineUsers();
-  }
-
-  Future<void> _loadOnlineUsers() async {
-    // In a real app, you would get online users from Firestore presence system
-    // For now, using sample data
-    setState(() {
-      _isLoading = false;
-    });
   }
 
   @override
@@ -56,7 +46,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
               // Implement search
             },
           ),
-          IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.more_vert),
+            onPressed: () {},
+          ),
         ],
       ),
       body: Column(
@@ -157,23 +150,65 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     // Parse the group data
                     final group = GroupModel.fromJson({...data, 'id': doc.id});
 
-                    // Get last message info (you would get this from a subcollection)
-                    // For now, using a placeholder
-                    final lastMessage = _getLastMessageInfo(group.id);
+                    // Get real last message info from Firestore
+                    return FutureBuilder<QuerySnapshot>(
+                      future: _firebaseService.chatsCollection
+                          .where('groupId', isEqualTo: group.id)
+                          .orderBy('timestamp', descending: true)
+                          .limit(1)
+                          .get(),
+                      builder: (context, lastMessageSnapshot) {
+                        if (lastMessageSnapshot.connectionState == ConnectionState.waiting) {
+                          return ChatListItem(
+                            group: group,
+                            lastMessage: null,
+                            currentUserId: currentUserId,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => GroupChatScreen(
+                                    groupId: group.id,
+                                    groupName: group.name,
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        }
 
-                    return ChatListItem(
-                      group: group,
-                      lastMessage: lastMessage,
-                      currentUserId: currentUserId,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => GroupChatScreen(
-                              groupId: group.id,
-                              groupName: group.name,
-                            ),
-                          ),
+                        Map<String, dynamic>? lastMessageData;
+                        int unreadCount = 0;
+
+                        if (lastMessageSnapshot.hasData && lastMessageSnapshot.data!.docs.isNotEmpty) {
+                          final lastMsgDoc = lastMessageSnapshot.data!.docs.first;
+                          lastMessageData = lastMsgDoc.data() as Map<String, dynamic>;
+
+                          // Get unread count (messages not read by current user)
+                          final readBy = List<String>.from(lastMessageData['readBy'] ?? []);
+                          if (!readBy.contains(currentUserId) && lastMessageData['userId'] != currentUserId) {
+                            unreadCount = 1; // Simplified, you'd need a more sophisticated unread count
+                          }
+                        }
+
+                        return ChatListItem(
+                          group: group,
+                          lastMessage: lastMessageData,
+                          unreadCount: unreadCount,
+                          currentUserId: currentUserId,
+                          onTap: () {
+                            // Mark messages as read when opening chat
+                            _markMessagesAsRead(group.id, currentUserId);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => GroupChatScreen(
+                                  groupId: group.id,
+                                  groupName: group.name,
+                                ),
+                              ),
+                            );
+                          },
                         );
                       },
                     );
@@ -197,6 +232,23 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
+  Future<void> _markMessagesAsRead(String groupId, String userId) async {
+    try {
+      final unreadMessages = await _firebaseService.chatsCollection
+          .where('groupId', isEqualTo: groupId)
+          .where('readBy', arrayContains: userId)
+          .get();
+
+      for (var doc in unreadMessages.docs) {
+        await doc.reference.update({
+          'readBy': FieldValue.arrayUnion([userId]),
+        });
+      }
+    } catch (e) {
+      print('Error marking messages as read: $e');
+    }
+  }
+
   Widget _buildOnlineUsersSection() {
     return SizedBox(
       height: 100,
@@ -208,7 +260,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text('No users found'));
+            return const Center(child: Text('No users online'));
           }
 
           final users = snapshot.data!.docs;
@@ -222,8 +274,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
               final name = data['name'] ?? 'User';
               final photoUrl = data['photoUrl'];
-              // final defaultAvatar =
-              //     'https://ui-avatars.com/api/?name=${Uri.encodeComponent(name)}&background=7B61FF&color=ffffff&size=256';
               return Padding(
                 padding: const EdgeInsets.only(right: 16),
                 child: Column(
@@ -235,20 +285,20 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           backgroundImage: photoUrl != null
                               ? CachedNetworkImageProvider(photoUrl)
                               : const NetworkImage(
-                                  'https://th.bing.com/th/id/OIP.0AKX_YJS6w3y215EcZ-WAAAAAA?w=151&h=180&c=7&r=0&o=7&dpr=1.3&pid=1.7&rm=3',
-                                ),
+                            'https://th.bing.com/th/id/OIP.0AKX_YJS6w3y215EcZ-WAAAAAA?w=151&h=180&c=7&r=0&o=7&dpr=1.3&pid=1.7&rm=3',
+                          ),
                           child: photoUrl == null
                               ? Text(
-                                  name.isNotEmpty ? name[0].toUpperCase() : '?',
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF7B61FF),
-                                  ),
-                                )
+                            name.isNotEmpty ? name[0].toUpperCase() : '?',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF7B61FF),
+                            ),
+                          )
                               : null,
                         ),
-                        // Online indicator (temporary: always green)
+                        // Online indicator
                         Positioned(
                           bottom: 0,
                           right: 0,
@@ -284,41 +334,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
       ),
     );
   }
-
-  // Helper method to get last message info
-  Map<String, dynamic> _getLastMessageInfo(String groupId) {
-    // In a real app, you would query the messages subcollection
-    // For now, returning sample data based on groupId
-    final now = DateTime.now();
-
-    if (groupId.contains('1')) {
-      return {
-        'lastMessage': 'See you all at the airport!',
-        'lastSender': 'Sarah Wilson',
-        'timestamp': now.subtract(const Duration(minutes: 30)),
-        'unreadCount': 3,
-      };
-    } else if (groupId.contains('2')) {
-      return {
-        'lastMessage': 'Don\'t forget trekking poles',
-        'lastSender': 'Mike Chen',
-        'timestamp': now.subtract(const Duration(hours: 2)),
-        'unreadCount': 0,
-      };
-    } else {
-      return {
-        'lastMessage': 'Temple visit confirmed for tomorrow',
-        'lastSender': 'Lisa Park',
-        'timestamp': now.subtract(const Duration(days: 1)),
-        'unreadCount': 1,
-      };
-    }
-  }
 }
 
 class ChatListItem extends StatelessWidget {
   final GroupModel group;
-  final Map<String, dynamic> lastMessage;
+  final Map<String, dynamic>? lastMessage;
+  final int unreadCount;
   final String currentUserId;
   final VoidCallback onTap;
 
@@ -326,14 +347,13 @@ class ChatListItem extends StatelessWidget {
     super.key,
     required this.group,
     required this.lastMessage,
+    this.unreadCount = 0,
     required this.currentUserId,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final unreadCount = lastMessage['unreadCount'] ?? 0;
-
     return ListTile(
       onTap: onTap,
       leading: Stack(
@@ -342,19 +362,19 @@ class ChatListItem extends StatelessWidget {
             radius: 28,
             backgroundImage: group.coverImage != null
                 ? CachedNetworkImageProvider(group.coverImage!)
-                :const AssetImage('lib/assets/images/logo1.png'),
+                : const AssetImage('lib/assets/images/logo1.png') as ImageProvider,
             child: group.coverImage == null
                 ? Text(
-                    group.name.isNotEmpty ? group.name[0].toUpperCase() : 'G',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF7B61FF),
-                    ),
-                  )
+              group.name.isNotEmpty ? group.name[0].toUpperCase() : 'G',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF7B61FF),
+              ),
+            )
                 : null,
           ),
-          // Online indicator (you would get this from presence system)
+          // Online indicator (simplified)
           Positioned(
             bottom: 0,
             right: 0,
@@ -376,9 +396,7 @@ class ChatListItem extends StatelessWidget {
             child: Text(
               group.name,
               style: TextStyle(
-                fontWeight: unreadCount > 0
-                    ? FontWeight.bold
-                    : FontWeight.normal,
+                fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
                 fontSize: 16,
                 color: const Color(0xFF1A1D2B),
               ),
@@ -388,7 +406,7 @@ class ChatListItem extends StatelessWidget {
           ),
           Text(
             _formatTime(
-              lastMessage['timestamp'] as DateTime? ?? group.lastActivityAt,
+              lastMessage?['timestamp']?.toDate() ?? group.lastActivityAt,
             ),
             style: TextStyle(color: Colors.grey[600], fontSize: 12),
           ),
@@ -418,9 +436,7 @@ class ChatListItem extends StatelessWidget {
               _getLastMessagePreview(),
               style: TextStyle(
                 color: unreadCount > 0 ? Colors.black : Colors.grey[600],
-                fontWeight: unreadCount > 0
-                    ? FontWeight.w600
-                    : FontWeight.normal,
+                fontWeight: unreadCount > 0 ? FontWeight.w600 : FontWeight.normal,
                 fontSize: 14,
               ),
               maxLines: 1,
@@ -475,12 +491,17 @@ class ChatListItem extends StatelessWidget {
   }
 
   String _getLastMessagePreview() {
-    final sender = lastMessage['lastSender'] ?? 'Unknown';
-    final message = lastMessage['lastMessage'] ?? 'No messages yet';
-
-    if (sender == 'You' || sender == currentUserId) {
-      return 'You: $message';
+    if (lastMessage == null) {
+      return 'No messages yet';
     }
-    return '$sender: $message';
+
+    final senderId = lastMessage!['userId'] ?? '';
+    final senderName = lastMessage!['userName'] ?? 'Unknown';
+    final messageText = lastMessage!['text'] ?? '';
+
+    if (senderId == currentUserId) {
+      return 'You: $messageText';
+    }
+    return '$senderName: $messageText';
   }
 }
