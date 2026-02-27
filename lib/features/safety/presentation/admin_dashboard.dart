@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:buddygoapp/core/services/firebase_service.dart';
 import 'package:buddygoapp/core/widgets/custom_button.dart';
 import '../data/report_model.dart';
+import 'admin_user_profile_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -521,7 +522,14 @@ class UserCard extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () {
-                      // View profile
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => AdminUserProfileScreen(
+                            userId: userId,
+                          ),
+                        ),
+                      );
                     },
                     child: const Text('View Profile'),
                   ),
