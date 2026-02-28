@@ -6,6 +6,8 @@ import 'package:buddygoapp/core/services/firebase_service.dart';
 import 'package:buddygoapp/core/widgets/custom_button.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/services/notification_service.dart';
+
 class AdminUserProfileScreen extends StatefulWidget {
   final String userId;
   final bool isAdmin;
@@ -111,6 +113,12 @@ class _AdminUserProfileScreenState extends State<AdminUserProfileScreen> {
         'verifiedAt': newStatus ? FieldValue.serverTimestamp() : null,
         'verifiedBy': newStatus ? FirebaseAuth.instance.currentUser?.uid : null,
       });
+      // 🔥 ADD THIS - Send notification to user
+      await _firebaseService.sendVerifiedBadgeNotification(
+        userId: widget.userId,
+        userName: _userData!['name'] ?? 'User',
+        isVerified: newStatus,
+      );
 
       // Update local state
       setState(() {

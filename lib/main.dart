@@ -5,10 +5,14 @@ import 'package:provider/provider.dart';
 import 'package:buddygoapp/app.dart';
 import 'package:buddygoapp/providers.dart';
 import 'package:buddygoapp/core/services/notification_service.dart';
+import 'package:buddygoapp/features/groups/presentation/group_chat_screen.dart'; // Add this
+import 'package:buddygoapp/features/user/presentation/profile_screen.dart'; // Add this
 import 'core/theme/dark_theme.dart';
 import 'core/theme/light_theme.dart';
 import 'firebase_options.dart';
 
+// Add this global key
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,8 +22,28 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Initialize notifications
-  await NotificationService().initialize();
+  // Initialize notifications with callback
+  await NotificationService().initialize(
+    onTap: (route, data) {
+      // Handle notification tap
+      if (route == '/chat') {
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (context) => GroupChatScreen(
+              groupId: data['groupId'] ?? '',
+              groupName: data['groupName'] ?? 'Chat',
+            ),
+          ),
+        );
+      } else if (route == '/profile') {
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (context) => const ProfileScreen(),
+          ),
+        );
+      }
+    },
+  );
 
   runApp(const MyApp());
 }
@@ -34,6 +58,7 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'BuddyGO',
         debugShowCheckedModeBanner: false,
+        navigatorKey: navigatorKey, // Add this
         theme: lightTheme,
         darkTheme: darkTheme,
         themeMode: ThemeMode.light,

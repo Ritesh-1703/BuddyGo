@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:badges/badges.dart' as badges;
+import 'package:buddygoapp/core/services/notification_service.dart'; // Add this import
+import '../../notifications/presentation/notifications_screen.dart';
 import '/../features/auth/presentation/auth_controller.dart';
 import 'package:buddygoapp/features/discovery/presentation/discovery_screen.dart';
 import 'package:buddygoapp/features/groups/presentation/create_group_screen.dart';
@@ -23,14 +25,13 @@ class _HomeScreenState extends State<HomeScreen> {
     const DiscoveryScreen(),
     const ChatListScreen(),
     const MyTripsScreen(),
-    const Scaffold(body: Center(child: Text('Notifications'))),
+    const NotificationsScreen(),
     const ProfileScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // REMOVED: appBar property completely
       body: _screens[_selectedIndex],
       floatingActionButton: _buildFloatingActionButton(),
       bottomNavigationBar: _buildBottomNavigationBar(),
@@ -60,7 +61,12 @@ class _HomeScreenState extends State<HomeScreen> {
       case 1: // Chats - Create new chat
         return FloatingActionButton(
           onPressed: () {
-            // Create new chat/group
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const CreateGroupScreen(),
+              ),
+            );
           },
           backgroundColor: const Color(0xFF7B61FF),
           child: const Icon(Icons.message, color: Colors.white),
@@ -104,14 +110,29 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(_selectedIndex == 2 ? Icons.travel_explore : Icons.travel_explore_outlined),
             label: 'My Trips',
           ),
+          // 🔥 FIXED: Real-time notification count using StreamBuilder
           BottomNavigationBarItem(
-            icon: badges.Badge(
-              showBadge: true,
-              badgeContent: const Text(
-                '3',
-                style: TextStyle(fontSize: 10, color: Colors.white),
-              ),
-              child: Icon(_selectedIndex == 3 ? Icons.notifications : Icons.notifications_outlined),
+            icon: StreamBuilder<int>(
+              stream: NotificationService().getUnreadCount(),
+              builder: (context, snapshot) {
+                final unreadCount = snapshot.data ?? 0;
+
+                return badges.Badge(
+                  showBadge: unreadCount > 0,
+                  badgeContent: Text(
+                    unreadCount > 9 ? '9+' : '$unreadCount',
+                    style: const TextStyle(fontSize: 10, color: Colors.white),
+                  ),
+                  child: Icon(
+                    _selectedIndex == 3
+                        ? Icons.notifications
+                        : Icons.notifications_outlined,
+                    color: _selectedIndex == 3
+                        ? const Color(0xFF7B61FF)
+                        : Colors.grey[600],
+                  ),
+                );
+              },
             ),
             label: 'Alerts',
           ),

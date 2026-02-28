@@ -7,6 +7,7 @@ import 'package:buddygoapp/features/discovery/data/trip_model.dart';
 import 'package:buddygoapp/features/user/data/user_model.dart';
 
 import '../../features/groups/data/group_model.dart';
+import '../../features/notifications/data/notification_model.dart';
 import '../../features/safety/data/report_model.dart';
 
 class FirebaseService {
@@ -24,6 +25,7 @@ class FirebaseService {
   CollectionReference get groupsCollection => _firestore.collection('groups');
   CollectionReference get chatsCollection => _firestore.collection('chats');
   CollectionReference get reportsCollection => _firestore.collection('reports');
+  CollectionReference get notificationCollection => _firestore.collection('notifications');
 
   // User Operations
   Future<void> createUserProfile(UserModel user) async {
@@ -621,6 +623,207 @@ class FirebaseService {
     }
   }
 
+
+  /// Create a notification for a user
+  Future<void> createNotification({
+    required String userId,
+    required String title,
+    required String body,
+    required NotificationType type,
+    Map<String, dynamic>? data,
+    String? senderId,
+    String? senderName,
+    String? groupId,
+    String? groupName,
+    String? tripId,
+    String? tripName,
+  }) async {
+    try {
+      final notificationId = DateTime.now().millisecondsSinceEpoch.toString();
+
+      final notification = NotificationModel(
+        id: notificationId,
+        title: title,
+        body: body,
+        type: type,
+        data: data,
+        timestamp: DateTime.now(),
+        senderId: senderId,
+        senderName: senderName,
+        groupId: groupId,
+        groupName: groupName,
+        tripId: tripId,
+        tripName: tripName,
+      );
+
+      await usersCollection
+          .doc(userId)
+          .collection('notifications')
+          .doc(notificationId)
+          .set(notification.toJson());
+
+      print('✅ Notification created for user: $userId');
+    } catch (e) {
+      print('❌ Error creating notification: $e');
+    }
+  }
+
+  /// Get notifications stream for a user
+  Stream<List<NotificationModel>> getUserNotifications(String userId) {
+    return usersCollection
+        .doc(userId)
+        .collection('notifications')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return NotificationModel.fromJson(data);
+      }).toList();
+    });
+  }
+
+  /// Get unread notifications count for a user
+  Stream<int> getUnreadNotificationCount(String userId) {
+    return usersCollection
+        .doc(userId)
+        .collection('notifications')
+        .where('read', isEqualTo: false)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+  /// Mark a notification as read
+  Future<void> markNotificationAsRead({
+    required String userId,
+    required String notificationId,
+  }) async {
+    try {
+      await usersCollection
+          .doc(userId)
+          .collection('notifications')
+          .doc(notificationId)
+          .update({'read': true});
+
+      print('✅ Notification $notificationId marked as read');
+    } catch (e) {
+      print('❌ Error marking notification as read: $e');
+    }
+  }
+
+  /// Mark all notifications as read for a user
+  Future<void> markAllNotificationsAsRead(String userId) async {
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+      final snapshot = await usersCollection
+          .doc(userId)
+          .collection('notifications')
+          .where('read', isEqualTo: false)
+          .get();
+
+      for (var doc in snapshot.docs) {
+        batch.update(doc.reference, {'read': true});
+      }
+
+      await batch.commit();
+      print('✅ All notifications marked as read for user: $userId');
+    } catch (e) {
+      print('❌ Error marking all notifications as read: $e');
+    }
+  }
+
+  /// Delete a notification
+  Future<void> deleteNotification({
+    required String userId,
+    required String notificationId,
+  }) async {
+    try {
+      await usersCollection
+          .doc(userId)
+          .collection('notifications')
+          .doc(notificationId)
+          .delete();
+
+      print('✅ Notification $notificationId deleted');
+    } catch (e) {
+      print('❌ Error deleting notification: $e');
+    }
+  }
+
+  /// Send notification for verified badge
+  Future<void> sendVerifiedBadgeNotification({
+    required String userId,
+    required String userName,
+    required bool isVerified,
+  }) async {
+    await createNotification(
+      userId: userId,
+      title: isVerified ? '✅ Verified Traveler!' : '❌ Verification Removed',
+      body: isVerified
+          ? 'Congratulations $userName! You are now a Verified Traveler.'
+          : 'Your Verified Traveler badge has been removed.',
+      type: NotificationType.verifiedBadge,
+      data: {
+        'userId': userId,
+        'userName': userName,
+        'isVerified': isVerified,
+      },
+    );
+  }
+
+  /// Send notification for new message
+  Future<void> sendMessageNotification({
+    required String groupId,
+    required String groupName,
+    required String senderId,
+    required String senderName,
+    required String message,
+    required List<String> recipientUserIds,
+  }) async {
+    for (String userId in recipientUserIds) {
+      await createNotification(
+        userId: userId,
+        title: '💬 New message in $groupName',
+        body: '$senderName: $message',
+        type: NotificationType.message,
+        senderId: senderId,
+        senderName: senderName,
+        groupId: groupId,
+        groupName: groupName,
+        data: {
+          'groupId': groupId,
+          'groupName': groupName,
+          'senderId': senderId,
+          'senderName': senderName,
+          'message': message,
+        },
+      );
+    }
+  }
+
+  /// Send notification for trip update
+  Future<void> sendTripUpdateNotification({
+    required String tripId,
+    required String tripName,
+    required String updateMessage,
+    required List<String> memberIds,
+  }) async {
+    for (String userId in memberIds) {
+      await createNotification(
+        userId: userId,
+        title: '✈️ Trip Update: $tripName',
+        body: updateMessage,
+        type: NotificationType.tripUpdate,
+        tripId: tripId,
+        tripName: tripName,
+        data: {
+          'tripId': tripId,
+          'tripName': tripName,
+          'updateMessage': updateMessage,
+        },
+      );
+    }
+  }
 
 
   // Get current user ID

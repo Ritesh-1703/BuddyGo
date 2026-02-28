@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 import 'package:buddygoapp/core/services/firebase_service.dart';
 import 'package:buddygoapp/features/auth/presentation/auth_controller.dart';
 
+import '../../../core/services/notification_service.dart';
+
 class GroupChatScreen extends StatefulWidget {
   final String groupId;
   final String groupName;
@@ -83,6 +85,22 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         userName: user.name ?? 'Anonymous',
         text: messageText,
       );
+      final group = await _firebaseService.getGroupById(widget.groupId);
+      if (group != null) {
+        final otherMembers = group.memberIds
+            .where((id) => id != user.id)
+            .toList();
+
+        // 🔥 Send push notifications to other members
+        await _firebaseService.sendMessageNotification(
+          groupId: widget.groupId,
+          groupName: widget.groupName,
+          senderName: user.name ?? 'Someone',
+          message: messageText,
+          recipientUserIds: otherMembers,
+          senderId: user.id,
+        );
+      }
 
       _scrollToBottom();
     } catch (e) {
@@ -96,6 +114,49 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       setState(() => _isSending = false);
     }
   }
+
+  // In your _sendMessage method
+  //   Future<void> _sendMessage() async {
+  //     if (_messageController.text.trim().isEmpty) return;
+  //
+  //     final authController = Provider.of<AuthController>(context, listen: false);
+  //     final user = authController.currentUser;
+  //
+  //     if (user == null) return;
+  //
+  //     final messageText = _messageController.text.trim();
+  //     _messageController.clear();
+  //
+  //     try {
+  //       // Send message to Firestore
+  //       await _firebaseService.sendMessage(
+  //         groupId: widget.groupId,
+  //         userId: user.id,
+  //         userName: user.name ?? 'Anonymous',
+  //         text: messageText,
+  //       );
+  //
+  //       // 🔥 Get group members except sender
+  //       final group = await _firebaseService.getGroupById(widget.groupId);
+  //       if (group != null) {
+  //         final otherMembers = group.memberIds.where((id) => id != user.id).toList();
+  //
+  //         // 🔥 Send push notifications to other members
+  //         await NotificationService().sendMessageNotification(
+  //           groupId: widget.groupId,
+  //           groupName: widget.groupName,
+  //           senderName: user.name ?? 'Someone',
+  //           message: messageText,
+  //           recipientUserIds: otherMembers,
+  //           senderId: user.id,
+  //         );
+  //       }
+  //
+  //       _scrollToBottom();
+  //     } catch (e) {
+  //       print('Error sending message: $e');
+  //     }
+  //   }
 
   Future<void> _deleteSelectedMessages() async {
     if (_selectedMessageIds.isEmpty) return;
@@ -194,9 +255,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     final currentUserId = authController.currentUser?.id;
 
     return Scaffold(
-      appBar: _isSelectionMode
-          ? _buildSelectionAppBar()
-          : _buildNormalAppBar(),
+      appBar: _isSelectionMode ? _buildSelectionAppBar() : _buildNormalAppBar(),
       body: Column(
         children: [
           // Messages Stream
@@ -248,9 +307,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                         const SizedBox(height: 8),
                         Text(
                           'Be the first to say hello!',
-                          style: TextStyle(
-                            color: Colors.grey[500],
-                          ),
+                          style: TextStyle(color: Colors.grey[500]),
                         ),
                       ],
                     ),
@@ -273,7 +330,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                     final isSelected = _selectedMessageIds.contains(messageId);
 
                     return GestureDetector(
-                      onLongPress: isMe ? () => _toggleSelection(messageId) : null,
+                      onLongPress: isMe
+                          ? () => _toggleSelection(messageId)
+                          : null,
                       onTap: _isSelectionMode && isMe
                           ? () => _toggleSelection(messageId)
                           : null,
@@ -288,11 +347,14 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                             senderName: data['userName'] ?? 'Unknown',
                             senderImage: data['userImage'],
                             text: data['text'] ?? '',
-                            timestamp: data['timestamp']?.toDate() ?? DateTime.now(),
+                            timestamp:
+                                data['timestamp']?.toDate() ?? DateTime.now(),
                             isMe: isMe,
                           ),
                           isSelected: isSelected,
-                          onLongPress: isMe ? () => _toggleSelection(messageId) : null,
+                          onLongPress: isMe
+                              ? () => _toggleSelection(messageId)
+                              : null,
                         ),
                       ),
                     );
@@ -308,9 +370,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                border: Border(
-                  top: BorderSide(color: Colors.grey.shade200),
-                ),
+                border: Border(top: BorderSide(color: Colors.grey.shade200)),
               ),
               child: Row(
                 children: [
@@ -318,10 +378,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                   SizedBox(
                     height: 20,
                     width: 20,
-                    child: Icon(
-                      Icons.attach_file,
-                      color: Colors.grey[500],
-                    ),
+                    child: Icon(Icons.attach_file, color: Colors.grey[500]),
                   ),
                   Expanded(
                     child: Container(
@@ -380,17 +437,11 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         children: [
           Text(
             widget.groupName,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
           Text(
             '$_onlineCount online • $_memberCount members',
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w400,
-            ),
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
           ),
         ],
       ),
@@ -413,10 +464,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       ),
       title: Text(
         '${_selectedMessageIds.length} selected',
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-        ),
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
       ),
       actions: [
         IconButton(
@@ -440,10 +488,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
           children: [
             const Text(
               'Group Info',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 20),
             ListTile(
@@ -483,8 +528,8 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Report Group'),
         content: const Text(
-            'Are you sure you want to report this group? '
-                'Our team will review it within 24 hours.'
+          'Are you sure you want to report this group? '
+          'Our team will review it within 24 hours.',
         ),
         actions: [
           TextButton(
@@ -517,8 +562,8 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Leave Group'),
         content: const Text(
-            'Are you sure you want to leave this group? '
-                'You will no longer receive messages from this group.'
+          'Are you sure you want to leave this group? '
+          'You will no longer receive messages from this group.',
         ),
         actions: [
           TextButton(
@@ -527,7 +572,10 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
           ),
           TextButton(
             onPressed: () async {
-              final authController = Provider.of<AuthController>(context, listen: false);
+              final authController = Provider.of<AuthController>(
+                context,
+                listen: false,
+              );
               final userId = authController.currentUser?.id;
 
               if (userId != null) {
@@ -651,8 +699,8 @@ class ChatBubble extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: message.isMe
                             ? (isSelected
-                            ? const Color(0xFF7B61FF).withOpacity(0.7)
-                            : const Color(0xFF7B61FF))
+                                  ? const Color(0xFF7B61FF).withOpacity(0.7)
+                                  : const Color(0xFF7B61FF))
                             : Colors.grey[100],
                         borderRadius: BorderRadius.only(
                           topLeft: const Radius.circular(16),

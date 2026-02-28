@@ -69,8 +69,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               : user?.photoUrl != null
                               ? NetworkImage(user!.photoUrl!)
                               : const AssetImage(
-                              'assets/images/default_avatar.png')
-                          as ImageProvider,
+                                      'assets/images/default_avatar.png',
+                                    )
+                                    as ImageProvider,
                         ),
                         Positioned(
                           bottom: 0,
@@ -112,12 +113,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                     // 🔥 CHANGED: Dynamic Verification Badge with StreamBuilder
                     StreamBuilder<DocumentSnapshot>(
-                      stream: _firebaseService.usersCollection.doc(user?.id).snapshots(),
+                      stream: _firebaseService.usersCollection
+                          .doc(user?.id)
+                          .snapshots(),
                       builder: (context, snapshot) {
                         bool isVerified = false;
 
                         if (snapshot.hasData && snapshot.data!.exists) {
-                          final userData = snapshot.data!.data() as Map<String, dynamic>?;
+                          final userData =
+                              snapshot.data!.data() as Map<String, dynamic>?;
                           isVerified = userData?['isVerifiedTraveler'] == true;
                         }
 
@@ -136,7 +140,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                isVerified ? Icons.verified : Icons.verified_outlined,
+                                isVerified
+                                    ? Icons.verified
+                                    : Icons.verified_outlined,
                                 size: 16,
                                 color: isVerified
                                     ? const Color(0xFF00D4AA)
@@ -144,7 +150,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                isVerified ? 'Verified Traveler' : 'Not Verified',
+                                isVerified
+                                    ? 'Verified Traveler'
+                                    : 'Not Verified',
                                 style: TextStyle(
                                   color: isVerified
                                       ? const Color(0xFF00D4AA)
@@ -169,7 +177,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildStat('Trips', '12'),
+                    FutureBuilder<QuerySnapshot>(
+                      future: FirebaseFirestore.instance
+                          .collection('trips')
+                          .where('hostId', isEqualTo: user?.id)
+                          .get(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) {
+                          return _buildUserStat('Trips', '0');
+                        }
+
+                        return _buildUserStat(
+                          'Trips',
+                          snapshot.data!.docs.length.toString(),
+                        );
+                      },
+                    ),
                     _buildStat('Friends', '48'),
                     _buildStat('Reviews', '4.8'),
                     _buildStat('Level', 'Explorer'),
@@ -270,7 +293,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Navigator.pushNamedAndRemoveUntil(
                       context,
                       '/login',
-                          (route) => false,
+                      (route) => false,
                     );
                   }
                 },
@@ -330,6 +353,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
         color: Color(0xFFA0A8B8),
       ),
       onTap: onTap,
+    );
+  }
+
+  Widget _buildUserStat(String label, String value) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1A1D2B),
+          ),
+        ),
+        Text(label, style: TextStyle(fontSize: 12, color: Color(0xFF6E7A8A))),
+      ],
     );
   }
 
