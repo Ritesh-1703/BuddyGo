@@ -20,7 +20,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
   bool _locationEnabled = true;
-  bool _darkModeEnabled = false;
+  // bool _darkModeEnabled = false;
   String _language = 'English';
   String _currency = 'INR (₹)';
 
@@ -43,7 +43,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _notificationsEnabled = prefs.getBool('notifications') ?? true;
       _locationEnabled = prefs.getBool('location') ?? true;
-      _darkModeEnabled = prefs.getBool('darkMode') ?? false;
+      // _darkModeEnabled = prefs.getBool('darkMode') ?? false;
       _language = prefs.getString('language') ?? 'English';
       _currency = prefs.getString('currency') ?? 'INR (₹)';
     });
@@ -53,7 +53,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('notifications', _notificationsEnabled);
     await prefs.setBool('location', _locationEnabled);
-    await prefs.setBool('darkMode', _darkModeEnabled);
+    // await prefs.setBool('darkMode', _darkModeEnabled);
     await prefs.setString('language', _language);
     await prefs.setString('currency', _currency);
 
@@ -135,16 +135,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         setState(() => _locationEnabled = value);
                       },
                     ),
-                    _buildSettingsItem(
-                      icon: Icons.dark_mode,
-                      title: 'Dark Mode',
-                      subtitle: 'Switch to dark theme',
-                      value: _darkModeEnabled,
-                      onChanged: (value) {
-                        setState(() => _darkModeEnabled = value);
-                        // TODO: Implement theme switching
-                      },
-                    ),
+                    // _buildSettingsItem(
+                    //   icon: Icons.dark_mode,
+                    //   title: 'Dark Mode',
+                    //   subtitle: 'Switch to dark theme',
+                    //   // value: _darkModeEnabled,
+                    //   onChanged: (value) {
+                    //     setState(() => _darkModeEnabled = value);
+                    //     // TODO: Implement theme switching
+                    //   },
+                    // ),
                   ],
                 ),
               ),
