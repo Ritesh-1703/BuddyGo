@@ -222,19 +222,31 @@ class FirebaseService {
     required String adminId,
     required String adminName,
   }) async {
+
     final groupRef = groupsCollection.doc(groupId);
 
     await _firestore.runTransaction((transaction) async {
+
+      // ✅ READ 1
       final groupDoc = await transaction.get(groupRef);
       if (!groupDoc.exists) throw Exception('Group not found');
 
       final data = groupDoc.data() as Map<String, dynamic>;
       final group = GroupModel.fromJson({...data, 'id': groupDoc.id});
 
-      // Get current pending requests
-      final pendingRequests = List<Map<String, dynamic>>.from(data['pendingRequests'] ?? []);
+      // ✅ READ 2 (trip read BEFORE writes)
+      DocumentSnapshot? tripDoc;
+      DocumentReference? tripRef;
 
-      // Find and update the request status
+      if (group.tripId != null) {
+        tripRef = tripsCollection.doc(group.tripId);
+        tripDoc = await transaction.get(tripRef);
+      }
+
+      // Process pending requests
+      final pendingRequests =
+      List<Map<String, dynamic>>.from(data['pendingRequests'] ?? []);
+
       final updatedRequests = pendingRequests.map((req) {
         if (req['userId'] == userId) {
           req['status'] = 'approved';
@@ -244,7 +256,7 @@ class FirebaseService {
         return req;
       }).toList();
 
-      // Add user to members
+      // ✅ WRITE 1
       transaction.update(groupRef, {
         'pendingRequests': updatedRequests,
         'memberIds': FieldValue.arrayUnion([userId]),
@@ -253,20 +265,16 @@ class FirebaseService {
         'lastActivityAt': FieldValue.serverTimestamp(),
       });
 
-      // Find related trip to update member count
-      if (group.tripId != null) {
-        final tripRef = tripsCollection.doc(group.tripId);
-        final tripDoc = await transaction.get(tripRef);
-        if (tripDoc.exists) {
-          transaction.update(tripRef, {
-            'currentMembers': FieldValue.increment(1),
-            'memberIds': FieldValue.arrayUnion([userId]),
-          });
-        }
+      // ✅ WRITE 2
+      if (tripDoc != null && tripDoc.exists) {
+        transaction.update(tripRef!, {
+          'currentMembers': FieldValue.increment(1),
+          'memberIds': FieldValue.arrayUnion([userId]),
+        });
       }
     });
 
-    // Send notification to user about approval
+    // Send notification AFTER transaction
     await createNotification(
       userId: userId,
       title: '✅ Request Approved!',

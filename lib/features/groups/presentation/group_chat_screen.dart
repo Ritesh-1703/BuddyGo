@@ -131,6 +131,20 @@ class _GroupChatScreenState extends State<GroupChatScreen> with TickerProviderSt
       }
     });
   }
+  // Add this method in _GroupChatScreenState
+  Future<void> _toggleApprovalRequirement(bool value) async {
+    try {
+      await _firebaseService.groupsCollection.doc(widget.groupId).update({
+        'isJoinApprovalRequired': value,
+      });
+
+      _showSnackbar(value
+          ? 'Join requests are now required'
+          : 'Anyone can now join directly');
+    } catch (e) {
+      _showSnackbar('Error updating settings', isError: true);
+    }
+  }
 
   @override
   void dispose() {
@@ -1135,224 +1149,273 @@ class _GroupChatScreenState extends State<GroupChatScreen> with TickerProviderSt
   }
 
   void _showGroupInfo(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(35)),
-      ),
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.5,
-        minChildSize: 0.3,
-        maxChildSize: 0.8,
-        expand: false,
-        builder: (context, scrollController) => SafeArea(
-          top: false,
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(35)),
-            ),
-            child: SingleChildScrollView(
-              controller: scrollController,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  /// Drag Handle
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: ChatColors.border,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
+    // First fetch the group data
+    _firebaseService.getGroupById(widget.groupId).then((group) {
+      if (group == null) {
+        _showSnackbar('Group not found', isError: true);
+        return;
+      }
 
-                  /// Group Header Row
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(16),
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(35)),
+        ),
+        builder: (context) => DraggableScrollableSheet(
+          initialChildSize: 0.5,
+          minChildSize: 0.3,
+          maxChildSize: 0.8,
+          expand: false,
+          builder: (context, scrollController) => SafeArea(
+            top: false,
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(35)),
+              ),
+              child: SingleChildScrollView(
+                controller: scrollController,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    /// Drag Handle
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              ChatColors.primary,
-                              ChatColors.secondary
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: ChatColors.primary.withOpacity(0.3),
-                              blurRadius: 15,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.group,
-                          color: Colors.white,
-                          size: 28,
+                          color: ChatColors.border,
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
-                      const SizedBox(width: 16),
-
-                      /// Group Info
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.groupName,
-                              style: GoogleFonts.poppins(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700,
-                                color: ChatColors.textPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-
-                            ValueListenableBuilder<int>(
-                              valueListenable: _memberCountNotifier,
-                              builder: (context, memberCount, child) {
-                                return ValueListenableBuilder<int>(
-                                  valueListenable: _onlineCountNotifier,
-                                  builder: (context, onlineCount, child) {
-                                    return Text(
-                                      '$memberCount members • $onlineCount online',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 14,
-                                        color: ChatColors.textSecondary,
-                                      ),
-                                    );
-                                  },
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  /// Section Title
-                  Text(
-                    'Group Options',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: ChatColors.textPrimary,
                     ),
-                  ),
+                    const SizedBox(height: 24),
 
-                  const SizedBox(height: 16),
-
-                  /// View Members
-                  _buildInfoTile(
-                    icon: Icons.people_outline,
-                    title: 'View All Members',
-                    subtitle: 'See who\'s in this group',
-                    color: ChatColors.primary,
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        PageRouteBuilder(
-                          pageBuilder: (context, animation, secondaryAnimation) =>
-                              GroupMembersScreen(
-                                groupId: widget.groupId,
-                                groupName: widget.groupName,
+                    /// Group Header Row
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [
+                                ChatColors.primary,
+                                ChatColors.secondary
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: ChatColors.primary.withOpacity(0.3),
+                                blurRadius: 15,
+                                offset: const Offset(0, 8),
                               ),
-                          transitionsBuilder:
-                              (context, animation, secondaryAnimation, child) {
-                            const begin = Offset(1.0, 0.0);
-                            const end = Offset.zero;
-                            const curve = Curves.easeInOut;
-                            var tween = Tween(begin: begin, end: end)
-                                .chain(CurveTween(curve: curve));
-                            return SlideTransition(
-                              position: animation.drive(tween),
-                              child: child,
-                            );
-                          },
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.group,
+                            color: Colors.white,
+                            size: 28,
+                          ),
                         ),
-                      );
-                    },
-                  ),
+                        const SizedBox(width: 16),
 
-                  const Divider(height: 24, color: ChatColors.border),
+                        /// Group Info
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.groupName,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  color: ChatColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
 
-                  /// ✅ Join Requests Tile (Only for Admins)
-                  if (_isCurrentUserAdmin)
+                              ValueListenableBuilder<int>(
+                                valueListenable: _memberCountNotifier,
+                                builder: (context, memberCount, child) {
+                                  return ValueListenableBuilder<int>(
+                                    valueListenable: _onlineCountNotifier,
+                                    builder: (context, onlineCount, child) {
+                                      return Text(
+                                        '$memberCount members • $onlineCount online',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 14,
+                                          color: ChatColors.textSecondary,
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    /// Section Title
+                    Text(
+                      'Group Options',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: ChatColors.textPrimary,
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    /// View Members
                     _buildInfoTile(
-                      icon: Icons.how_to_reg,
-                      title: 'Join Requests',
-                      subtitle: _pendingRequestsCount > 0
-                          ? '$_pendingRequestsCount pending ${_pendingRequestsCount == 1 ? 'request' : 'requests'}'
-                          : 'No pending requests',
+                      icon: Icons.people_outline,
+                      title: 'View All Members',
+                      subtitle: 'See who\'s in this group',
                       color: ChatColors.primary,
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (context) => JoinRequestsScreen(
-                              groupId: widget.groupId,
-                              groupName: widget.groupName,
-                            ),
+                          PageRouteBuilder(
+                            pageBuilder: (context, animation, secondaryAnimation) =>
+                                GroupMembersScreen(
+                                  groupId: widget.groupId,
+                                  groupName: widget.groupName,
+                                ),
+                            transitionsBuilder:
+                                (context, animation, secondaryAnimation, child) {
+                              const begin = Offset(1.0, 0.0);
+                              const end = Offset.zero;
+                              const curve = Curves.easeInOut;
+                              var tween = Tween(begin: begin, end: end)
+                                  .chain(CurveTween(curve: curve));
+                              return SlideTransition(
+                                position: animation.drive(tween),
+                                child: child,
+                              );
+                            },
                           ),
-                        ).then((_) {
-                          // Refresh counts when returning
-                          _initializeCounts();
-                        });
+                        );
                       },
                     ),
 
-                  const Divider(height: 24, color: ChatColors.border),
+                    const Divider(height: 24, color: ChatColors.border),
 
-                  /// Report Group
-                  _buildInfoTile(
-                    icon: Icons.report_outlined,
-                    title: 'Report Group',
-                    subtitle: 'Report inappropriate content',
-                    color: ChatColors.error,
-                    onTap: () {
-                      Navigator.pop(context);
-                      _showReportDialog();
-                    },
-                  ),
+                    /// ✅ Join Requests Tile (Only for Admins)
+                    if (_isCurrentUserAdmin)
+                      _buildInfoTile(
+                        icon: Icons.how_to_reg,
+                        title: 'Join Requests',
+                        subtitle: _pendingRequestsCount > 0
+                            ? '$_pendingRequestsCount pending ${_pendingRequestsCount == 1 ? 'request' : 'requests'}'
+                            : 'No pending requests',
+                        color: ChatColors.primary,
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => JoinRequestsScreen(
+                                groupId: widget.groupId,
+                                groupName: widget.groupName,
+                              ),
+                            ),
+                          ).then((_) {
+                            // Refresh counts when returning
+                            _initializeCounts();
+                          });
+                        },
+                      ),
 
-                  const Divider(height: 24, color: ChatColors.border),
+                    const Divider(height: 24, color: ChatColors.border),
 
-                  /// Leave Group
-                  _buildInfoTile(
-                    icon: Icons.exit_to_app,
-                    title: 'Leave Group',
-                    subtitle: 'Permanently leave this group',
-                    color: ChatColors.error,
-                    onTap: () {
-                      Navigator.pop(context);
-                      _showLeaveGroupDialog();
-                    },
-                  ),
+                    /// ✅ Approval Required Tile (Only for Admins)
+                    if (_isCurrentUserAdmin)
+                      _buildInfoTile(
+                        icon: Icons.lock_outline,
+                        title: 'Approval Required',
+                        subtitle: group.isJoinApprovalRequired
+                            ? 'New members need approval'
+                            : 'Anyone can join directly',
+                        color: group.isJoinApprovalRequired ? ChatColors.primary : ChatColors.textSecondary,
+                        onTap: () {
+                          Navigator.pop(context);
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Join Approval'),
+                              content: Text(group.isJoinApprovalRequired
+                                  ? 'Turn off approval requirement? Anyone can join directly.'
+                                  : 'Turn on approval requirement? New members will need admin approval.'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text('Cancel'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                    _toggleApprovalRequirement(!group.isJoinApprovalRequired);
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: ChatColors.primary,
+                                  ),
+                                  child: Text(group.isJoinApprovalRequired ? 'Turn Off' : 'Turn On'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
 
-                  const SizedBox(height: 30),
-                ],
+                    const Divider(height: 24, color: ChatColors.border),
+
+                    /// Report Group
+                    _buildInfoTile(
+                      icon: Icons.report_outlined,
+                      title: 'Report Group',
+                      subtitle: 'Report inappropriate content',
+                      color: ChatColors.error,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showReportDialog();
+                      },
+                    ),
+
+                    const Divider(height: 24, color: ChatColors.border),
+
+                    /// Leave Group
+                    _buildInfoTile(
+                      icon: Icons.exit_to_app,
+                      title: 'Leave Group',
+                      subtitle: 'Permanently leave this group',
+                      color: ChatColors.error,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showLeaveGroupDialog();
+                      },
+                    ),
+
+                    const SizedBox(height: 30),
+                  ],
+                ),
               ),
             ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   Widget _buildInfoTile({
