@@ -12,26 +12,26 @@ import 'admin_user_profile_screen.dart';
 
 // ==================== CONSTANTS ====================
 class AdminColors {
-  static const Color primary = Color(0xFF8B5CF6);     // Purple
-  static const Color secondary = Color(0xFFFF6B6B);   // Coral
-  static const Color tertiary = Color(0xFF4FD1C5);    // Teal
-  static const Color accent = Color(0xFFFBBF24);      // Yellow
-  static const Color lavender = Color(0xFF9F7AEA);    // Lavender
-  static const Color success = Color(0xFF06D6A0);     // Mint Green
-  static const Color error = Color(0xFFFF6B6B);       // Coral for errors
-  static const Color warning = Color(0xFFFBBF24);      // Yellow for warnings
-  static const Color background = Color(0xFFF0F2FE);  // Light purple tint
+  static const Color primary = Color(0xFF8B5CF6); // Purple
+  static const Color secondary = Color(0xFFFF6B6B); // Coral
+  static const Color tertiary = Color(0xFF4FD1C5); // Teal
+  static const Color accent = Color(0xFFFBBF24); // Yellow
+  static const Color lavender = Color(0xFF9F7AEA); // Lavender
+  static const Color success = Color(0xFF06D6A0); // Mint Green
+  static const Color error = Color(0xFFFF6B6B); // Coral for errors
+  static const Color warning = Color(0xFFFBBF24); // Yellow for warnings
+  static const Color background = Color(0xFFF0F2FE); // Light purple tint
   static const Color surface = Colors.white;
   static const Color textPrimary = Color(0xFF1A202C);
   static const Color textSecondary = Color(0xFF718096);
   static const Color border = Color(0xFFE2E8F0);
 
   // Status colors
-  static const Color pending = Color(0xFFFBBF24);      // Yellow
-  static const Color dismissed = Color(0xFF718096);    // Grey
-  static const Color warned = Color(0xFF4FD1C5);       // Teal
-  static const Color suspended = Color(0xFFFF6B6B);    // Coral
-  static const Color resolved = Color(0xFF06D6A0);     // Mint
+  static const Color pending = Color(0xFFFBBF24); // Yellow
+  static const Color dismissed = Color(0xFF718096); // Grey
+  static const Color warned = Color(0xFF4FD1C5); // Teal
+  static const Color suspended = Color(0xFFFF6B6B); // Coral
+  static const Color resolved = Color(0xFF06D6A0); // Mint
 }
 
 class AdminDashboard extends StatefulWidget {
@@ -41,7 +41,8 @@ class AdminDashboard extends StatefulWidget {
   State<AdminDashboard> createState() => _AdminDashboardState();
 }
 
-class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStateMixin {
+class _AdminDashboardState extends State<AdminDashboard>
+    with TickerProviderStateMixin {
   final FirebaseService _firebaseService = FirebaseService();
   late TabController _tabController;
 
@@ -172,7 +173,10 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                           showBadge: pendingCount > 0,
                           badgeContent: Text(
                             pendingCount > 9 ? '9+' : '$pendingCount',
-                            style: const TextStyle(color: Colors.white, fontSize: 10),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                            ),
                           ),
                           badgeStyle: badges.BadgeStyle(
                             badgeColor: AdminColors.error,
@@ -221,14 +225,21 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
         }
 
         final reports = snapshot.data!.docs;
-        final pendingCount = reports.where((r) => (r.data() as Map<String, dynamic>)['status'] == 'pending').length;
+        final pendingCount = reports
+            .where(
+              (r) => (r.data() as Map<String, dynamic>)['status'] == 'pending',
+            )
+            .length;
 
         return Column(
           children: [
             if (pendingCount > 0)
               Container(
                 margin: const EdgeInsets.all(16),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [AdminColors.warning, AdminColors.secondary],
@@ -252,7 +263,11 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                         color: Colors.white.withOpacity(0.2),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.warning, color: Colors.white, size: 20),
+                      child: const Icon(
+                        Icons.warning,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -369,7 +384,9 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
               const SizedBox(width: 16),
               Expanded(
                 child: StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance.collection('trips').snapshots(),
+                  stream: FirebaseFirestore.instance
+                      .collection('trips')
+                      .snapshots(),
                   builder: (context, snapshot) {
                     final count = snapshot.data?.docs.length ?? 0;
                     return _buildStatCard(
@@ -403,22 +420,76 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                 ),
               ),
               const SizedBox(width: 16),
+              // Expanded(
+              //   child: StreamBuilder<QuerySnapshot>(
+              //     stream: FirebaseFirestore.instance.collection('payments').snapshots(),
+              //     builder: (context, snapshot) {
+              //       int total = 0;
+              //       if (snapshot.hasData) {
+              //         total = snapshot.data!.docs.fold(0, (sum, doc) {
+              //           final data = doc.data() as Map<String, dynamic>;
+              //           return sum + (data['amount'] as int? ?? 0);
+              //         });
+              //       }
+              //       return _buildStatCard(
+              //         title: 'Revenue',
+              //         value: '₹${(total / 1000).toStringAsFixed(1)}K',
+              //         icon: Icons.attach_money,
+              //         color: AdminColors.lavender,
+              //       );
+              //     },
+              //   ),
+              // ),
               Expanded(
                 child: StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance.collection('payments').snapshots(),
-                  builder: (context, snapshot) {
+                  stream: FirebaseFirestore.instance
+                      .collection('payments')
+                      .snapshots(),
+                  builder: (context, paymentSnapshot) {
                     int total = 0;
-                    if (snapshot.hasData) {
-                      total = snapshot.data!.docs.fold(0, (sum, doc) {
+
+                    /// If payments exist → use them
+                    if (paymentSnapshot.hasData &&
+                        paymentSnapshot.data!.docs.isNotEmpty) {
+                      total = paymentSnapshot.data!.docs.fold(0, (sum, doc) {
                         final data = doc.data() as Map<String, dynamic>;
                         return sum + (data['amount'] as int? ?? 0);
                       });
+
+                      return _buildStatCard(
+                        title: 'Revenue',
+                        value: '₹${(total / 1000).toStringAsFixed(1)}K',
+                        icon: Icons.attach_money,
+                        color: AdminColors.lavender,
+                      );
                     }
-                    return _buildStatCard(
-                      title: 'Revenue',
-                      value: '₹${(total / 1000).toStringAsFixed(1)}K',
-                      icon: Icons.attach_money,
-                      color: AdminColors.lavender,
+
+                    /// If payments NOT active → calculate from trip budgets
+                    return StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('trips')
+                          .snapshots(),
+                      builder: (context, tripSnapshot) {
+                        int tripTotal = 0;
+
+                        if (tripSnapshot.hasData) {
+                          tripTotal = tripSnapshot.data!.docs.fold(0, (
+                            sum,
+                            doc,
+                          ) {
+                            final data = doc.data() as Map<String, dynamic>;
+                            return sum +
+                                ((data['budget'] as num?)?.toInt() ?? 0);
+                          });
+                        }
+
+                        return _buildStatCard(
+                          title: 'Trip Budget',
+                          value: '₹${(tripTotal / 1000).toStringAsFixed(1)}K',
+                          icon: Icons.account_balance_wallet,
+                          color: AdminColors.lavender,
+                        );
+                      },
                     );
                   },
                 ),
@@ -457,7 +528,11 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                         ),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.history, color: Colors.white, size: 18),
+                      child: const Icon(
+                        Icons.history,
+                        color: Colors.white,
+                        size: 18,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Text(
@@ -490,7 +565,9 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                           icon: Icons.flag,
                           title: 'Report submitted',
                           subtitle: '${data['reason']}',
-                          time: _formatTime((data['createdAt'] as Timestamp).toDate()),
+                          time: _formatTime(
+                            (data['createdAt'] as Timestamp).toDate(),
+                          ),
                           color: AdminColors.warning,
                         );
                       }).toList(),
@@ -514,7 +591,10 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AdminColors.primary.withOpacity(0.1), AdminColors.secondary.withOpacity(0.1)],
+                colors: [
+                  AdminColors.primary.withOpacity(0.1),
+                  AdminColors.secondary.withOpacity(0.1),
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -539,7 +619,11 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
     );
   }
 
-  Widget _buildEmptyState({required IconData icon, required String title, required String message}) {
+  Widget _buildEmptyState({
+    required IconData icon,
+    required String title,
+    required String message,
+  }) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -548,13 +632,20 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AdminColors.primary.withOpacity(0.1), AdminColors.secondary.withOpacity(0.1)],
+                colors: [
+                  AdminColors.primary.withOpacity(0.1),
+                  AdminColors.secondary.withOpacity(0.1),
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 64, color: AdminColors.primary.withOpacity(0.5)),
+            child: Icon(
+              icon,
+              size: 64,
+              color: AdminColors.primary.withOpacity(0.5),
+            ),
           ),
           const SizedBox(height: 24),
           Text(
@@ -748,10 +839,16 @@ class EnhancedReportCard extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [_getStatusColor(status).withOpacity(0.1), _getStatusColor(status).withOpacity(0.05)],
+                      colors: [
+                        _getStatusColor(status).withOpacity(0.1),
+                        _getStatusColor(status).withOpacity(0.05),
+                      ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -783,7 +880,10 @@ class EnhancedReportCard extends StatelessWidget {
                 ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: AdminColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
@@ -803,11 +903,17 @@ class EnhancedReportCard extends StatelessWidget {
 
             // Reporter Info
             FutureBuilder<DocumentSnapshot>(
-              future: FirebaseFirestore.instance.collection('users').doc(data['reporterId']).get(),
+              future: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(data['reporterId'])
+                  .get(),
               builder: (context, snapshot) {
-                final reporterName = snapshot.hasData
-                    ? (snapshot.data!.data() as Map<String, dynamic>)['name'] ?? 'Unknown'
-                    : 'Loading...';
+                // final reporterName = snapshot.hasData
+                //     ? (snapshot.data!.data() as Map<String, dynamic>)['name'] ?? 'Unknown'
+                //     : 'Loading...';
+                final reporterData =
+                    snapshot.data?.data() as Map<String, dynamic>?;
+                final reporterName = reporterData?['name'] ?? 'Admin';
 
                 return Row(
                   children: [
@@ -817,7 +923,11 @@ class EnhancedReportCard extends StatelessWidget {
                         color: AdminColors.primary.withOpacity(0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.person, size: 14, color: AdminColors.primary),
+                      child: const Icon(
+                        Icons.person,
+                        size: 14,
+                        color: AdminColors.primary,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Text(
@@ -844,11 +954,18 @@ class EnhancedReportCard extends StatelessWidget {
 
             // Reported User Info
             FutureBuilder<DocumentSnapshot>(
-              future: FirebaseFirestore.instance.collection('users').doc(data['reportedUserId']).get(),
+              future: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(data['reportedUserId'])
+                  .get(),
               builder: (context, snapshot) {
-                final reportedUserName = snapshot.hasData
-                    ? (snapshot.data!.data() as Map<String, dynamic>)['name'] ?? 'Unknown'
-                    : 'Loading...';
+                // final reportedUserName = snapshot.hasData
+                //     ? (snapshot.data!.data() as Map<String, dynamic>)['name'] ??
+                //           'Unknown'
+                //     : 'Loading...';
+                final reportedData =
+                    snapshot.data?.data() as Map<String, dynamic>?;
+                final reportedUserName = reportedData?['name'] ?? 'Unknown';
 
                 return Row(
                   children: [
@@ -858,7 +975,11 @@ class EnhancedReportCard extends StatelessWidget {
                         color: AdminColors.error.withOpacity(0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.warning, size: 14, color: AdminColors.error),
+                      child: const Icon(
+                        Icons.warning,
+                        size: 14,
+                        color: AdminColors.error,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Text(
@@ -966,10 +1087,7 @@ class EnhancedReportCard extends StatelessWidget {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withOpacity(0.3),
-          width: 1,
-        ),
+        border: Border.all(color: color.withOpacity(0.3), width: 1),
       ),
       child: Material(
         color: Colors.transparent,
@@ -1026,10 +1144,9 @@ class EnhancedReportCard extends StatelessWidget {
   }
 
   Future<void> _updateReportStatus(String status) async {
-    await FirebaseFirestore.instance.collection('reports').doc(reportId).update({
-      'status': status,
-      'resolvedAt': FieldValue.serverTimestamp(),
-    });
+    await FirebaseFirestore.instance.collection('reports').doc(reportId).update(
+      {'status': status, 'resolvedAt': FieldValue.serverTimestamp()},
+    );
   }
 }
 
@@ -1087,13 +1204,13 @@ class EnhancedUserCard extends StatelessWidget {
                         : null,
                     child: data['photoUrl'] == null
                         ? Text(
-                      data['name']?[0]?.toUpperCase() ?? '?',
-                      style: GoogleFonts.poppins(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: AdminColors.primary,
-                      ),
-                    )
+                            data['name']?[0]?.toUpperCase() ?? '?',
+                            style: GoogleFonts.poppins(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: AdminColors.primary,
+                            ),
+                          )
                         : null,
                   ),
                 ),
@@ -1148,11 +1265,7 @@ class EnhancedUserCard extends StatelessWidget {
                   },
                 ),
 
-                Container(
-                  width: 1,
-                  height: 30,
-                  color: AdminColors.border,
-                ),
+                Container(width: 1, height: 30, color: AdminColors.border),
 
                 // Reports Stat with Real-time Count
                 StreamBuilder<QuerySnapshot>(
@@ -1170,24 +1283,27 @@ class EnhancedUserCard extends StatelessWidget {
                   },
                 ),
 
-                Container(
-                  width: 1,
-                  height: 30,
-                  color: AdminColors.border,
-                ),
+                Container(width: 1, height: 30, color: AdminColors.border),
 
                 // Join Date
                 Column(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: AdminColors.success.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.calendar_today, size: 12, color: AdminColors.success),
+                          Icon(
+                            Icons.calendar_today,
+                            size: 12,
+                            color: AdminColors.success,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             _formatJoinDate(data['createdAt']),
@@ -1224,15 +1340,16 @@ class EnhancedUserCard extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => AdminUserProfileScreen(
-                            userId: userId,
-                          ),
+                          builder: (context) =>
+                              AdminUserProfileScreen(userId: userId),
                         ),
                       );
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AdminColors.primary,
-                      side: BorderSide(color: AdminColors.primary.withOpacity(0.5)),
+                      side: BorderSide(
+                        color: AdminColors.primary.withOpacity(0.5),
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
@@ -1330,7 +1447,11 @@ class EnhancedUserCard extends StatelessWidget {
     );
   }
 
-  Widget _buildUserStat({required String label, required String value, required Color color}) {
+  Widget _buildUserStat({
+    required String label,
+    required String value,
+    required Color color,
+  }) {
     return Column(
       children: [
         Text(
