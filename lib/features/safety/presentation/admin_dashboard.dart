@@ -1365,44 +1365,44 @@ class EnhancedUserCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AdminColors.primary, AdminColors.secondary],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AdminColors.primary.withOpacity(0.3),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: ElevatedButton(
-                      onPressed: () {},
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        foregroundColor: Colors.white,
-                        shadowColor: Colors.transparent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      child: Text(
-                        'Message',
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                // Expanded(
+                //   child: Container(
+                //     decoration: BoxDecoration(
+                //       gradient: const LinearGradient(
+                //         colors: [AdminColors.primary, AdminColors.secondary],
+                //         begin: Alignment.topLeft,
+                //         end: Alignment.bottomRight,
+                //       ),
+                //       borderRadius: BorderRadius.circular(16),
+                //       boxShadow: [
+                //         BoxShadow(
+                //           color: AdminColors.primary.withOpacity(0.3),
+                //           blurRadius: 10,
+                //           offset: const Offset(0, 4),
+                //         ),
+                //       ],
+                //     ),
+                //     child: ElevatedButton(
+                //       onPressed: () {},
+                //       style: ElevatedButton.styleFrom(
+                //         backgroundColor: Colors.transparent,
+                //         foregroundColor: Colors.white,
+                //         shadowColor: Colors.transparent,
+                //         shape: RoundedRectangleBorder(
+                //           borderRadius: BorderRadius.circular(16),
+                //         ),
+                //         padding: const EdgeInsets.symmetric(vertical: 14),
+                //       ),
+                //       child: Text(
+                //         'Message',
+                //         style: GoogleFonts.poppins(
+                //           fontSize: 13,
+                //           fontWeight: FontWeight.w600,
+                //         ),
+                //       ),
+                //     ),
+                //   ),
+                // ),
               ],
             ),
           ],

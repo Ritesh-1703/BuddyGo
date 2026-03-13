@@ -169,10 +169,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                         gradient: const RadialGradient(
                           colors: [
                             RegisterColors.primary,
-                            RegisterColors.secondary,
                             RegisterColors.tertiary,
                           ],
-                          stops: [0.3, 0.6, 0.9],
+                          stops: [0.3, 0.9],
                         ),
                         shape: BoxShape.circle,
                         boxShadow: [

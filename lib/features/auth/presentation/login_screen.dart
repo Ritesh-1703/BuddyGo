@@ -513,7 +513,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                 ),
                                 child: ClipOval(
                                   child: Image.asset(
-                                    'lib/assets/images/app_icon_foreground.png',
+                                    'lib/assets/images/logo6.png',
                                     fit: BoxFit.cover,
                                   ),
                                 ),

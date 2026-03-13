@@ -141,12 +141,12 @@ class _ChatListScreenState extends State<ChatListScreen> with TickerProviderStat
                     ),
                   ],
                 ),
-                child: IconButton(
-                  icon: Icon(Icons.search, color: ChatColors.primary),
-                  onPressed: () {
-                    // Implement search
-                  },
-                ),
+                // child: IconButton(
+                //   icon: Icon(Icons.search, color: ChatColors.primary),
+                //   onPressed: () {
+                //
+                //   },
+                // ),
               ),
               // More Options Button
               Container(
@@ -162,10 +162,10 @@ class _ChatListScreenState extends State<ChatListScreen> with TickerProviderStat
                     ),
                   ],
                 ),
-                child: IconButton(
-                  icon: Icon(Icons.more_vert, color: ChatColors.primary),
-                  onPressed: () {},
-                ),
+                // child: IconButton(
+                //   icon: Icon(Icons.more_vert, color: ChatColors.primary),
+                //   onPressed: () {},
+                // ),
               ),
             ],
           ),

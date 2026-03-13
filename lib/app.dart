@@ -49,7 +49,7 @@ class SplashScreen extends StatelessWidget {
                 ],
               ),
               child: ClipOval(
-                  child: Image.asset('lib/assets/images/Logo.png')
+                  child: Image.asset('lib/assets/images/logo6.png')
               ),
             ),
             const SizedBox(height: 30),
