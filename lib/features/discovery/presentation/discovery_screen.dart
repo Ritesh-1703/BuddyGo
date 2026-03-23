@@ -20,7 +20,13 @@ class DiscoveryScreen extends StatefulWidget {
 class _DiscoveryScreenState extends State<DiscoveryScreen> {
   final FirebaseService _firebaseService = FirebaseService();
   String _selectedFilter = 'All';
-  final List<String> _filters = ['All', 'Upcoming', 'Popular', 'Nearby', 'Budget'];
+  final List<String> _filters = [
+    'All',
+    'Upcoming',
+    'Popular',
+    'Nearby',
+    'Budget',
+  ];
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -87,19 +93,22 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
                   ),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
-                    icon: const Icon(
-                      Icons.clear,
-                      color: Color(0xFFA0AEC0),
-                      size: 20,
-                    ),
-                    onPressed: () {
-                      _searchController.clear();
-                      setState(() {});
-                    },
-                  )
+                          icon: const Icon(
+                            Icons.clear,
+                            color: Color(0xFFA0AEC0),
+                            size: 20,
+                          ),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {});
+                          },
+                        )
                       : null,
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
                 ),
                 onChanged: (value) {
                   setState(() {});
@@ -114,7 +123,10 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
               height: 70,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
                 itemCount: _filters.length,
                 itemBuilder: (context, index) {
                   final filter = _filters[index];
@@ -123,13 +135,19 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
                   // Different colors for different filters
                   Color getFilterColor() {
                     if (!isSelected) return const Color(0xFF8B5CF6);
-                    switch(index) {
-                      case 0: return const Color(0xFF8B5CF6); // Purple
-                      case 1: return const Color(0xFFFF6B6B); // Coral
-                      case 2: return const Color(0xFF4FD1C5); // Teal
-                      case 3: return const Color(0xFFFBBF24); // Yellow
-                      case 4: return const Color(0xFF9F7AEA); // Lavender
-                      default: return const Color(0xFF8B5CF6);
+                    switch (index) {
+                      case 0:
+                        return const Color(0xFF8B5CF6); // Purple
+                      case 1:
+                        return const Color(0xFFFF6B6B); // Coral
+                      case 2:
+                        return const Color(0xFF4FD1C5); // Teal
+                      case 3:
+                        return const Color(0xFFFBBF24); // Yellow
+                      case 4:
+                        return const Color(0xFF9F7AEA); // Lavender
+                      default:
+                        return const Color(0xFF8B5CF6);
                     }
                   }
 
@@ -140,7 +158,9 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
                         filter,
                         style: GoogleFonts.poppins(
                           fontSize: 14,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.w500,
                           color: isSelected ? Colors.white : getFilterColor(),
                         ),
                       ),
@@ -152,13 +172,18 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
                       selectedColor: getFilterColor(),
                       checkmarkColor: Colors.white,
                       side: BorderSide(
-                        color: isSelected ? Colors.transparent : getFilterColor().withOpacity(0.3),
+                        color: isSelected
+                            ? Colors.transparent
+                            : getFilterColor().withOpacity(0.3),
                         width: 1.5,
                       ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       elevation: isSelected ? 4 : 0,
                       shadowColor: getFilterColor().withOpacity(0.3),
                     ),
@@ -185,7 +210,11 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFF8B5CF6), Color(0xFFFF6B6B), Color(0xFFFBBF24)],
+                      colors: [
+                        Color(0xFF8B5CF6),
+                        Color(0xFFFF6B6B),
+                        Color(0xFFFBBF24),
+                      ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       stops: [0.0, 0.6, 1.0],
@@ -286,14 +315,18 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
           // Real-time Trips List with Enhanced Cards
           SliverToBoxAdapter(
             child: StreamBuilder<List<Trip>>(
-              stream: _firebaseService.getTripsStreamWithFilter(_selectedFilter),
+              stream: _firebaseService.getTripsStreamWithFilter(
+                _selectedFilter,
+              ),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Padding(
                     padding: EdgeInsets.all(32),
                     child: Center(
                       child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8B5CF6)),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Color(0xFF8B5CF6),
+                        ),
                       ),
                     ),
                   );
@@ -385,9 +418,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
           ),
 
           // Bottom Spacing
-          const SliverToBoxAdapter(
-            child: SizedBox(height: 20),
-          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 20)),
         ],
       ),
     );
@@ -405,7 +436,8 @@ class EnhancedTripCard extends StatelessWidget {
     final days = trip.endDate.difference(trip.startDate).inDays;
     final seatsLeft = trip.maxMembers - trip.currentMembers;
     final percentage = trip.currentMembers / trip.maxMembers;
-
+    final currentUserId = firebaseService.currentUserId;
+    final isHost = currentUserId == trip.hostId;
     // Get screen size for responsive design
     final screenWidth = MediaQuery.of(context).size.width;
 
@@ -430,9 +462,7 @@ class EnhancedTripCard extends StatelessWidget {
       child: Card(
         elevation: 0,
         color: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         child: InkWell(
           onTap: () {
             Navigator.push(
@@ -524,7 +554,8 @@ class EnhancedTripCard extends StatelessWidget {
                     left: 16,
                     child: Container(
                       constraints: BoxConstraints(
-                        maxWidth: screenWidth * 0.5, // Limit width to 50% of screen
+                        maxWidth:
+                            screenWidth * 0.5, // Limit width to 50% of screen
                       ),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 14,
@@ -648,18 +679,22 @@ class EnhancedTripCard extends StatelessWidget {
                               CircleAvatar(
                                 radius: 14,
                                 backgroundImage: host?.photoUrl != null
-                                    ? CachedNetworkImageProvider(host!.photoUrl!)
+                                    ? CachedNetworkImageProvider(
+                                        host!.photoUrl!,
+                                      )
                                     : null,
-                                backgroundColor: const Color(0xFF8B5CF6).withOpacity(0.1),
+                                backgroundColor: const Color(
+                                  0xFF8B5CF6,
+                                ).withOpacity(0.1),
                                 child: host?.photoUrl == null
                                     ? Text(
-                                  host?.name?[0] ?? '?',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF8B5CF6),
-                                  ),
-                                )
+                                        host?.name?[0] ?? '?',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFF8B5CF6),
+                                        ),
+                                      )
                                     : null,
                               ),
                               const SizedBox(width: 8),
@@ -777,21 +812,31 @@ class EnhancedTripCard extends StatelessWidget {
                                 decoration: BoxDecoration(
                                   gradient: seatsLeft > 0
                                       ? const LinearGradient(
-                                    colors: [Color(0xFF4FD1C5), Color(0xFF06D6A0)],
-                                    begin: Alignment.centerLeft,
-                                    end: Alignment.centerRight,
-                                  )
+                                          colors: [
+                                            Color(0xFF4FD1C5),
+                                            Color(0xFF06D6A0),
+                                          ],
+                                          begin: Alignment.centerLeft,
+                                          end: Alignment.centerRight,
+                                        )
                                       : const LinearGradient(
-                                    colors: [Color(0xFFFF6B6B), Color(0xFFE53E3E)],
-                                    begin: Alignment.centerLeft,
-                                    end: Alignment.centerRight,
-                                  ),
+                                          colors: [
+                                            Color(0xFFFF6B6B),
+                                            Color(0xFFE53E3E),
+                                          ],
+                                          begin: Alignment.centerLeft,
+                                          end: Alignment.centerRight,
+                                        ),
                                   borderRadius: BorderRadius.circular(20),
                                   boxShadow: [
                                     BoxShadow(
                                       color: seatsLeft > 0
-                                          ? const Color(0xFF4FD1C5).withOpacity(0.3)
-                                          : const Color(0xFFFF6B6B).withOpacity(0.3),
+                                          ? const Color(
+                                              0xFF4FD1C5,
+                                            ).withOpacity(0.3)
+                                          : const Color(
+                                              0xFFFF6B6B,
+                                            ).withOpacity(0.3),
                                       blurRadius: 8,
                                       spreadRadius: 0,
                                     ),
@@ -835,7 +880,9 @@ class EnhancedTripCard extends StatelessWidget {
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF4FD1C5).withOpacity(0.1),
+                                  color: const Color(
+                                    0xFF4FD1C5,
+                                  ).withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
@@ -863,7 +910,8 @@ class EnhancedTripCard extends StatelessWidget {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => TripDetailsScreen(trip: trip),
+                                  builder: (context) =>
+                                      TripDetailsScreen(trip: trip),
                                 ),
                               );
                             },
@@ -886,73 +934,101 @@ class EnhancedTripCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 12),
+                        // In EnhancedTripCard build method
+
+                        // Then update the ElevatedButton:
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: seatsLeft > 0
+                            onPressed:
+                                seatsLeft > 0 &&
+                                    !isHost // ✅ Add isHost check here
                                 ? () async {
-                              final userId = firebaseService.currentUserId;
-                              final auth = context.read<AuthController>();
-                              final user = auth.currentUser;
-                              if (userId != null && user != null) {
-                                try {
-                                  await firebaseService.joinTrip(trip.id, userId, user.name!);
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Row(
-                                          children: [
-                                            const Icon(
-                                              Icons.check_circle,
-                                              color: Colors.white,
+                                    final userId =
+                                        firebaseService.currentUserId;
+                                    final auth = context.read<AuthController>();
+                                    final user = auth.currentUser;
+                                    if (userId != null && user != null) {
+                                      try {
+                                        await firebaseService.joinTrip(
+                                          trip.id,
+                                          userId,
+                                          user.name!,
+                                        );
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Row(
+                                                children: [
+                                                  const Icon(
+                                                    Icons.check_circle,
+                                                    color: Colors.white,
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  Expanded(
+                                                    child: Text(
+                                                      'Successfully joined the trip!',
+                                                      style:
+                                                          GoogleFonts.poppins(),
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      maxLines: 1,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              backgroundColor: const Color(
+                                                0xFF4FD1C5,
+                                              ),
+                                              behavior:
+                                                  SnackBarBehavior.floating,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                              ),
                                             ),
-                                            const SizedBox(width: 12),
-                                            Expanded(
-                                              child: Text(
-                                                'Successfully joined the trip!',
+                                          );
+                                        }
+                                      } catch (e) {
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'Error: ${e.toString().substring(0, e.toString().length > 30 ? 30 : e.toString().length)}...',
                                                 style: GoogleFonts.poppins(),
                                                 overflow: TextOverflow.ellipsis,
                                                 maxLines: 1,
                                               ),
+                                              backgroundColor: const Color(
+                                                0xFFFF6B6B,
+                                              ),
+                                              behavior:
+                                                  SnackBarBehavior.floating,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                              ),
                                             ),
-                                          ],
-                                        ),
-                                        backgroundColor: const Color(0xFF4FD1C5),
-                                        behavior: SnackBarBehavior.floating,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(16),
-                                        ),
-                                      ),
-                                    );
+                                          );
+                                        }
+                                      }
+                                    }
                                   }
-                                } catch (e) {
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Error: ${e.toString().substring(0, e.toString().length > 30 ? 30 : e.toString().length)}...',
-                                          style: GoogleFonts.poppins(),
-                                          overflow: TextOverflow.ellipsis,
-                                          maxLines: 1,
-                                        ),
-                                        backgroundColor: const Color(0xFFFF6B6B),
-                                        behavior: SnackBarBehavior.floating,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(16),
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                }
-                              }
-                            }
-                                : null,
+                                : null, // Disabled if no seats left OR user is host
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: seatsLeft > 0
+                              backgroundColor:
+                                  seatsLeft > 0 &&
+                                      !isHost // ✅ Different color if host
                                   ? const Color(0xFF8B5CF6)
                                   : const Color(0xFFA0AEC0),
                               foregroundColor: Colors.white,
-                              elevation: seatsLeft > 0 ? 8 : 0,
-                              shadowColor: const Color(0xFF8B5CF6).withOpacity(0.4),
+                              elevation: seatsLeft > 0 && !isHost ? 8 : 0,
+                              shadowColor: const Color(
+                                0xFF8B5CF6,
+                              ).withOpacity(0.4),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(20),
                               ),
@@ -964,7 +1040,11 @@ class EnhancedTripCard extends StatelessWidget {
                             ),
                             child: FittedBox(
                               fit: BoxFit.scaleDown,
-                              child: Text(seatsLeft > 0 ? 'Join Now' : 'Waitlist'),
+                              child: Text(
+                                isHost
+                                    ? "Your Trip" // ✅ Show "Your Trip" instead of Join
+                                    : (seatsLeft > 0 ? 'Join Now' : 'Waitlist'),
+                              ),
                             ),
                           ),
                         ),

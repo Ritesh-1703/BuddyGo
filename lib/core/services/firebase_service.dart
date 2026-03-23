@@ -123,6 +123,12 @@ class FirebaseService {
 
       final tripData = tripDoc.data() as Map<String, dynamic>;
 
+      //  ADD THIS CHECK: Prevent host from joining their own trip
+      final hostId = tripData['hostId'] as String?;
+      if (hostId == userId) {
+        throw Exception('You cannot join your own trip');
+      }
+
       final currentMembers = (tripData['currentMembers'] ?? 0) as int;
       final maxMembers = (tripData['maxMembers'] ?? 1) as int;
       final members = List<String>.from(tripData['memberIds'] ?? []);
@@ -135,6 +141,7 @@ class FirebaseService {
         throw Exception('Trip is full');
       }
 
+      // Rest of your joinTrip logic continues...
       // 2️⃣ Find related Group by tripId
       final groupQuery = await groupsCollection
           .where('tripId', isEqualTo: tripId)

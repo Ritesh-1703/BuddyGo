@@ -33,7 +33,9 @@ class TripDetailsScreen extends StatelessWidget {
     final days = trip.endDate.difference(trip.startDate).inDays;
     final seatsLeft = trip.maxMembers - trip.currentMembers;
     final percentage = trip.currentMembers / trip.maxMembers;
-
+    final firebaseService = FirebaseService();
+    final currentUserId = firebaseService.currentUserId;
+    final isHost = currentUserId == trip.hostId;
     return Scaffold(
       backgroundColor: TripColors.background,
       body: CustomScrollView(
@@ -278,27 +280,27 @@ class TripDetailsScreen extends StatelessWidget {
                                   ],
                                 ),
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: TripColors.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.star, color: TripColors.accent, size: 16),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '4.8',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: TripColors.primary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                              // Container(
+                              //   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              //   decoration: BoxDecoration(
+                              //     color: TripColors.primary.withOpacity(0.1),
+                              //     borderRadius: BorderRadius.circular(20),
+                              //   ),
+                              //   child: Row(
+                              //     children: [
+                              //       const Icon(Icons.star, color: TripColors.accent, size: 16),
+                              //       const SizedBox(width: 4),
+                              //       Text(
+                              //         '4.8',
+                              //         style: GoogleFonts.poppins(
+                              //           fontSize: 14,
+                              //           fontWeight: FontWeight.w600,
+                              //           color: TripColors.primary,
+                              //         ),
+                              //       ),
+                              //     ],
+                              //   ),
+                              // ),
                             ],
                           ),
                         );
@@ -531,7 +533,7 @@ class TripDetailsScreen extends StatelessWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: seatsLeft > 0
+                            onPressed: seatsLeft > 0 && !isHost  //  Add isHost check
                                 ? () async {
                               final service = FirebaseService();
                               final userId = service.currentUserId;
@@ -588,7 +590,9 @@ class TripDetailsScreen extends StatelessWidget {
                             }
                                 : null,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: seatsLeft > 0 ? TripColors.primary : TripColors.error,
+                              backgroundColor: seatsLeft > 0 && !isHost
+                                  ? TripColors.primary
+                                  : TripColors.error,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(20),
@@ -598,18 +602,24 @@ class TripDetailsScreen extends StatelessWidget {
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                               ),
-                              elevation: seatsLeft > 0 ? 8 : 0,
+                              elevation: seatsLeft > 0 && !isHost ? 8 : 0,
                               shadowColor: TripColors.primary.withOpacity(0.4),
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(
-                                  seatsLeft > 0 ? Icons.flight_takeoff : Icons.warning,
+                                  isHost
+                                      ? Icons.person
+                                      : (seatsLeft > 0 ? Icons.flight_takeoff : Icons.warning),
                                   size: 20,
                                 ),
                                 const SizedBox(width: 8),
-                                Text(seatsLeft > 0 ? 'Join Now' : 'Trip Full'),
+                                Text(
+                                    isHost
+                                        ? 'Your Trip'
+                                        : (seatsLeft > 0 ? 'Join Now' : 'Trip Full')
+                                ),
                               ],
                             ),
                           ),
