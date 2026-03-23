@@ -40,7 +40,7 @@ class TabLabels {
   static const String discover = 'Discover';
   static const String chats = 'Chats';
   static const String myTrips = 'My Trips';
-  static const String alerts = 'Alerts';
+  static const String alerts = 'Notification';
   static const String profile = 'Profile';
 }
 

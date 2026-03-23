@@ -651,11 +651,23 @@ class FirebaseService {
     final now = DateTime.now();
 
     if (filter == 'Upcoming') {
-      // Includes both ongoing + upcoming (not past)
-      query = tripsCollection
-          .where('endDate', isGreaterThanOrEqualTo: now)
-          .orderBy('endDate')
-          .orderBy('createdAt', descending: true);
+      // Get all trips first, then filter client-side
+      return tripsCollection
+          .orderBy('createdAt', descending:false)
+          .snapshots()
+          .map((snapshot) {
+        final allTrips = snapshot.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          return Trip.fromJson({...data, 'id': doc.id});
+        }).toList();
+
+        // Filter only upcoming trips (endDate >= now)
+        // and sort by endDate (soonest first)
+        return allTrips
+            .where((trip) => trip.endDate.isAfter(now) || trip.endDate.isAtSameMomentAs(now))
+            .toList()
+          ..sort((a, b) => a.endDate.compareTo(b.endDate));
+      });
     }
     else if (filter == 'Popular') {
       query = tripsCollection
