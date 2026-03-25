@@ -327,10 +327,63 @@ class _UserProfileViewScreenState extends State<UserProfileViewScreen> with Tick
     );
   }
 
+  // Helper method to calculate age from date of birth
+  int? _calculateAge(DateTime? birthDate) {
+    if (birthDate == null) return null;
+    final now = DateTime.now();
+    int age = now.year - birthDate.year;
+    if (now.month < birthDate.month ||
+        (now.month == birthDate.month && now.day < birthDate.day)) {
+      age--;
+    }
+    return age;
+  }
+
+  // Helper method to format gender for display
+  String _formatGender(String? gender) {
+    if (gender == null) return 'Not specified';
+    switch (gender) {
+      case 'male':
+        return 'Male';
+      case 'female':
+        return 'Female';
+      case 'other':
+        return 'Other';
+      case 'prefer_not_to_say':
+        return 'Prefer not to say';
+      default:
+        return gender;
+    }
+  }
+
+  // Helper method to get gender icon
+  IconData _getGenderIcon(String? gender) {
+    if (gender == null) return Icons.person;
+    switch (gender) {
+      case 'male':
+        return Icons.male;
+      case 'female':
+        return Icons.female;
+      case 'other':
+        return Icons.transgender;
+      case 'prefer_not_to_say':
+        return Icons.help_outline;
+      default:
+        return Icons.person;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authController = Provider.of<AuthController>(context);
     final isCurrentUser = authController.currentUser?.id == widget.userId;
+
+    // Get age and gender from user data
+    final dateOfBirth = _userData?['dateOfBirth'] != null
+        ? (_userData!['dateOfBirth'] as Timestamp).toDate()
+        : null;
+    final age = _calculateAge(dateOfBirth);
+    final gender = _userData?['gender'] as String?;
 
     return Scaffold(
       backgroundColor: ProfileViewColors.background,
@@ -483,6 +536,11 @@ class _UserProfileViewScreenState extends State<UserProfileViewScreen> with Tick
             _buildProfileHeader(),
             const SizedBox(height: 24),
 
+            // 🔥 NEW: Age and Gender Section
+            if (age != null || gender != null)
+              _buildAgeGenderSection(age, gender),
+            if (age != null || gender != null) const SizedBox(height: 16),
+
             // Action Buttons (if not current user)
             if (!isCurrentUser) ...[
               _buildActionButtons(),
@@ -581,6 +639,87 @@ class _UserProfileViewScreenState extends State<UserProfileViewScreen> with Tick
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  // 🔥 NEW: Age and Gender Section Widget
+  Widget _buildAgeGenderSection(int? age, String? gender) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            ProfileViewColors.primary.withOpacity(0.1),
+            ProfileViewColors.secondary.withOpacity(0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: ProfileViewColors.primary.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (gender != null) ...[
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: ProfileViewColors.primary.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                _getGenderIcon(gender),
+                size: 18,
+                color: ProfileViewColors.primary,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              _formatGender(gender),
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: ProfileViewColors.textPrimary,
+              ),
+            ),
+          ],
+          if (age != null && gender != null) ...[
+            Container(
+              width: 1,
+              height: 20,
+              margin: const EdgeInsets.symmetric(horizontal: 12),
+              color: ProfileViewColors.border,
+            ),
+          ],
+          if (age != null) ...[
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: ProfileViewColors.secondary.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.cake,
+                size: 18,
+                color: ProfileViewColors.secondary,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '$age years old',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: ProfileViewColors.textPrimary,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

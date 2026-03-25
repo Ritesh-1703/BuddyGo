@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:buddygoapp/core/widgets/custom_button.dart';
 import 'package:buddygoapp/core/widgets/custom_textfield.dart';
 import 'package:buddygoapp/features/auth/presentation/auth_controller.dart';
@@ -43,14 +44,29 @@ class _EditProfileScreenState extends State<EditProfileScreen>
   final _bioController = TextEditingController();
   final _locationController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _dateController = TextEditingController();
 
   File? _selectedImage;
   bool _isLoading = false;
   String? _selectedImageUrl;
 
+  // Gender selection
+  String? _selectedGender;
+  final List<String> _genders = [
+    'Male',
+    'Female',
+    'Other',
+    'Prefer not to say',
+  ];
+
+  // Date of Birth
+  DateTime? _selectedDate;
+
   // Track if phone number changed
   bool _phoneNumberChanged = false;
   String? _originalPhoneNumber;
+  DateTime? _originalDateOfBirth;
+  String? _originalGender;
 
   late AnimationController _pulseAnimationController;
 
@@ -103,12 +119,55 @@ class _EditProfileScreenState extends State<EditProfileScreen>
       _selectedImageUrl = user.photoUrl;
       _selectedInterests = user.interests ?? [];
 
+      // 🔥 NEW: Load gender and date of birth
+      _originalGender = user.gender;
+      _selectedGender = _formatGenderForDisplay(user.gender);
+      _originalDateOfBirth = user.dateOfBirth;
+      _selectedDate = user.dateOfBirth;
+      if (_selectedDate != null) {
+        _dateController.text = DateFormat('dd/MM/yyyy').format(_selectedDate!);
+      }
+
       userController.updateProfile(
         name: user.name,
         bio: user.bio,
         location: user.location,
         imageUrl: user.photoUrl,
       );
+    }
+  }
+
+  // Helper to convert stored gender to display format
+  String? _formatGenderForDisplay(String? gender) {
+    if (gender == null) return null;
+    switch (gender) {
+      case 'male':
+        return 'Male';
+      case 'female':
+        return 'Female';
+      case 'other':
+        return 'Other';
+      case 'prefer_not_to_say':
+        return 'Prefer not to say';
+      default:
+        return gender;
+    }
+  }
+
+  // Helper to convert display gender to storage format
+  String? _formatGenderForStorage(String? displayGender) {
+    if (displayGender == null) return null;
+    switch (displayGender) {
+      case 'Male':
+        return 'male';
+      case 'Female':
+        return 'female';
+      case 'Other':
+        return 'other';
+      case 'Prefer not to say':
+        return 'prefer_not_to_say';
+      default:
+        return displayGender.toLowerCase();
     }
   }
 
@@ -120,6 +179,7 @@ class _EditProfileScreenState extends State<EditProfileScreen>
     _locationController.dispose();
     _phoneController.removeListener(_onPhoneNumberChanged);
     _phoneController.dispose();
+    _dateController.dispose();
     super.dispose();
   }
 
@@ -135,6 +195,38 @@ class _EditProfileScreenState extends State<EditProfileScreen>
     if (image != null) {
       setState(() {
         _selectedImage = File(image.path);
+      });
+    }
+  }
+
+  Future<void> _selectDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate:
+          _selectedDate ??
+          DateTime.now().subtract(const Duration(days: 365 * 18)),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: EditProfileColors.primary,
+              onPrimary: Colors.white,
+              surface: EditProfileColors.surface,
+              onSurface: EditProfileColors.textPrimary,
+            ),
+            dialogBackgroundColor: Colors.white,
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+        _dateController.text = DateFormat('dd/MM/yyyy').format(picked);
       });
     }
   }
@@ -207,6 +299,20 @@ class _EditProfileScreenState extends State<EditProfileScreen>
           'updatedAt': FieldValue.serverTimestamp(),
         };
 
+        // 🔥 NEW: Add gender to update data
+        if (_selectedGender != _originalGender) {
+          updateData['gender'] = _formatGenderForStorage(_selectedGender);
+        }
+
+        // 🔥 NEW: Add date of birth to update data
+        if (_selectedDate != _originalDateOfBirth) {
+          if (_selectedDate != null) {
+            updateData['dateOfBirth'] = Timestamp.fromDate(_selectedDate!);
+          } else {
+            updateData['dateOfBirth'] = null;
+          }
+        }
+
         // 🔥 UPDATED: Phone number validation logic
         if (_phoneNumberChanged) {
           final phone = _phoneController.text.trim();
@@ -237,6 +343,9 @@ class _EditProfileScreenState extends State<EditProfileScreen>
           location: _locationController.text.trim(),
           interests: _selectedInterests,
           phone: _phoneNumberChanged ? _phoneController.text.trim() : null,
+          dateOfBirth: _selectedDate,
+          // 🔥 NEW
+          gender: _formatGenderForStorage(_selectedGender), // 🔥 NEW
         );
 
         userController.updateProfile(
@@ -600,6 +709,249 @@ class _EditProfileScreenState extends State<EditProfileScreen>
                           }
                           return null;
                         },
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 🔥 NEW: Gender Selection Section
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: EditProfileColors.tertiary.withOpacity(0.1),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: EditProfileColors.tertiary
+                                        .withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    Icons.wc,
+                                    color: EditProfileColors.tertiary,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Gender',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: EditProfileColors.textPrimary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 12,
+                              children: _genders.map((gender) {
+                                final isSelected = _selectedGender == gender;
+                                return GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedGender = gender;
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 10,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      gradient: isSelected
+                                          ? LinearGradient(
+                                              colors: [
+                                                EditProfileColors.tertiary,
+                                                EditProfileColors.success,
+                                              ],
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                            )
+                                          : null,
+                                      color: isSelected
+                                          ? null
+                                          : Colors.grey[50],
+                                      borderRadius: BorderRadius.circular(30),
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? Colors.transparent
+                                            : EditProfileColors.border,
+                                        width: 1,
+                                      ),
+                                      boxShadow: isSelected
+                                          ? [
+                                              BoxShadow(
+                                                color: EditProfileColors
+                                                    .tertiary
+                                                    .withOpacity(0.3),
+                                                blurRadius: 10,
+                                                offset: const Offset(0, 4),
+                                              ),
+                                            ]
+                                          : null,
+                                    ),
+                                    child: Text(
+                                      gender,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                        fontWeight: isSelected
+                                            ? FontWeight.w600
+                                            : FontWeight.w500,
+                                        color: isSelected
+                                            ? Colors.white
+                                            : EditProfileColors.textSecondary,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 🔥 NEW: Date of Birth Section
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: EditProfileColors.lavender.withOpacity(0.1),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: EditProfileColors.lavender
+                                        .withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    Icons.cake,
+                                    color: EditProfileColors.lavender,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Date of Birth',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: EditProfileColors.textPrimary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            InkWell(
+                              onTap: _selectDate,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[50],
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: EditProfileColors.border,
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.calendar_today,
+                                      color: EditProfileColors.lavender,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        _dateController.text.isEmpty
+                                            ? 'Select your date of birth'
+                                            : _dateController.text,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 14,
+                                          color: _dateController.text.isEmpty
+                                              ? EditProfileColors.textSecondary
+                                              : EditProfileColors.textPrimary,
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: EditProfileColors.lavender
+                                            .withOpacity(0.1),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        Icons.arrow_drop_down,
+                                        color: EditProfileColors.lavender,
+                                        size: 20,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            if (_selectedDate != null) ...[
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: EditProfileColors.primary.withOpacity(
+                                    0.1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  'Age: ${_calculateAge(_selectedDate!)} years',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: EditProfileColors.primary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -1161,6 +1513,17 @@ class _EditProfileScreenState extends State<EditProfileScreen>
               ),
             ),
     );
+  }
+
+  // Helper method to calculate age
+  int _calculateAge(DateTime birthDate) {
+    final now = DateTime.now();
+    int age = now.year - birthDate.year;
+    if (now.month < birthDate.month ||
+        (now.month == birthDate.month && now.day < birthDate.day)) {
+      age--;
+    }
+    return age;
   }
 
   // Helper methods for phone validation UI

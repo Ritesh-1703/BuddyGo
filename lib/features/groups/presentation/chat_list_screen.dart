@@ -662,20 +662,40 @@ class _ChatListScreenState extends State<ChatListScreen> with TickerProviderStat
     return 0;
   }
 
+  // ==================== FIXED: MARK MESSAGES AS READ ====================
+  // In ChatListScreen class, replace the _markMessagesAsRead method
   Future<void> _markMessagesAsRead(String groupId, String userId) async {
     try {
-      final unreadMessages = await _firebaseService.chatsCollection
+      // Get all messages in the group
+      final allMessages = await _firebaseService.chatsCollection
           .where('groupId', isEqualTo: groupId)
-          .where('readBy', arrayContains: userId)
           .get();
 
-      for (var doc in unreadMessages.docs) {
-        await doc.reference.update({
-          'readBy': FieldValue.arrayUnion([userId]),
-        });
+      if (allMessages.docs.isEmpty) return;
+
+      final batch = FirebaseFirestore.instance.batch();
+      int updateCount = 0;
+
+      for (var doc in allMessages.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final readBy = List<String>.from(data['readBy'] ?? []);
+        final messageUserId = data['userId'] as String?;
+
+        // Mark as read if user hasn't read it and didn't send it
+        if (!readBy.contains(userId) && messageUserId != userId) {
+          batch.update(doc.reference, {
+            'readBy': FieldValue.arrayUnion([userId]),
+          });
+          updateCount++;
+        }
+      }
+
+      if (updateCount > 0) {
+        await batch.commit();
+        print('✅ Marked $updateCount messages as read in group: $groupId');
       }
     } catch (e) {
-      print('Error marking messages as read: $e');
+      print('❌ Error marking messages as read: $e');
     }
   }
 

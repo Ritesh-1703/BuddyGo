@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:buddygoapp/core/services/firebase_service.dart';
 
 class NotificationService {
@@ -13,11 +14,15 @@ class NotificationService {
 
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
+  FlutterLocalNotificationsPlugin();
   final FirebaseService _firebaseService = FirebaseService();
 
   // Store navigation callback for handling taps
   Function(String route, dynamic data)? _onNotificationTapCallback;
+
+  // 🔥 ADD YOUR FCM SERVER KEY HERE (from Firebase Console)
+  // IMPORTANT: In production, this should be stored securely on a backend server
+  static const String _fcmServerKey = 'BLtKojyoQccYvu3B70DvaC9n1NOXxwvOLW56tZ3GUTCPqNxMSK6MPNhAjg0ovnvaWpo52OEVLtSxmQ5SZCm0H1M'; // 👈 REPLACE THIS!
 
   Future<void> initialize({Function(String route, dynamic data)? onTap}) async {
     _onNotificationTapCallback = onTap;
@@ -35,20 +40,20 @@ class NotificationService {
 
       // Initialize local notifications
       const AndroidInitializationSettings initializationSettingsAndroid =
-          AndroidInitializationSettings('@mipmap/ic_launcher');
+      AndroidInitializationSettings('@mipmap/ic_launcher');
 
       final DarwinInitializationSettings initializationSettingsIOS =
-          DarwinInitializationSettings(
-            requestSoundPermission: true,
-            requestBadgePermission: true,
-            requestAlertPermission: true,
-          );
+      DarwinInitializationSettings(
+        requestSoundPermission: true,
+        requestBadgePermission: true,
+        requestAlertPermission: true,
+      );
 
       final InitializationSettings initializationSettings =
-          InitializationSettings(
-            android: initializationSettingsAndroid,
-            iOS: initializationSettingsIOS,
-          );
+      InitializationSettings(
+        android: initializationSettingsAndroid,
+        iOS: initializationSettingsIOS,
+      );
 
       await _flutterLocalNotificationsPlugin.initialize(
         settings: initializationSettings,
@@ -88,9 +93,10 @@ class NotificationService {
 
   // Background message handler
   static Future<void> _firebaseMessagingBackgroundHandler(
-    RemoteMessage message,
-  ) async {
+      RemoteMessage message,
+      ) async {
     print("📩 Background message: ${message.messageId}");
+    // You can add background notification handling here
   }
 
   Future<void> _saveTokenToFirestore(String? token) async {
@@ -120,7 +126,7 @@ class NotificationService {
 
       final notificationData = {
         'id':
-            message.messageId ??
+        message.messageId ??
             DateTime.now().millisecondsSinceEpoch.toString(),
         'title': message.notification?.title ?? '',
         'body': message.notification?.body ?? '',
@@ -145,27 +151,26 @@ class NotificationService {
     }
   }
 
-  // ✅ FIXED: _showLocalNotification with proper parameters (NO DUPLICATE)
   Future<void> _showLocalNotification(RemoteMessage message) async {
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
-        AndroidNotificationDetails(
-          'buddygo_channel',
-          'BuddyGO Notifications',
-          channelDescription: 'Travel updates, messages and alerts',
-          importance: Importance.max,
-          priority: Priority.high,
-          showWhen: true,
-          enableVibration: true,
-          enableLights: true,
-          color: Color(0xFF7B61FF),
-        );
+    AndroidNotificationDetails(
+      'buddygo_channel',
+      'BuddyGO Notifications',
+      channelDescription: 'Travel updates, messages and alerts',
+      importance: Importance.max,
+      priority: Priority.high,
+      showWhen: true,
+      enableVibration: true,
+      enableLights: true,
+      color: Color(0xFF7B61FF),
+    );
 
     const DarwinNotificationDetails iosPlatformChannelSpecifics =
-        DarwinNotificationDetails(
-          presentSound: true,
-          presentBadge: true,
-          presentAlert: true,
-        );
+    DarwinNotificationDetails(
+      presentSound: true,
+      presentBadge: true,
+      presentAlert: true,
+    );
 
     const NotificationDetails platformChannelSpecifics = NotificationDetails(
       android: androidPlatformChannelSpecifics,
@@ -223,6 +228,78 @@ class NotificationService {
     }
   }
 
+  // 🔥 UPDATED: Actual push notification sending method
+  Future<void> sendPushNotification({
+    required String title,
+    required String body,
+    required String token,
+    Map<String, dynamic>? data,
+  }) async {
+    print('📨 Sending push notification to token: $token');
+    print('   Title: $title');
+    print('   Body: $body');
+    print('   Data: $data');
+
+    try {
+      final response = await http.post(
+        Uri.parse('https://fcm.googleapis.com/fcm/send'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'key=$_fcmServerKey',
+        },
+        body: jsonEncode({
+          'to': token,
+          'notification': {
+            'title': title,
+            'body': body,
+            'sound': 'default',
+            'badge': 1,
+            'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+          },
+          'data': {
+            'type': data?['type'] ?? 'general',
+            'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+            ...?data,
+          },
+          'priority': 'high',
+          'content_available': true,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        print('✅ Push notification sent successfully');
+        final responseBody = jsonDecode(response.body);
+        print('FCM Response: $responseBody');
+      } else {
+        print('❌ Failed to send push notification: ${response.statusCode}');
+        print('Response body: ${response.body}');
+      }
+    } catch (e) {
+      print('❌ Error sending push notification: $e');
+    }
+  }
+
+  // 🔥 UPDATED: Send notification to multiple recipients
+  Future<void> sendPushNotificationToMultipleTokens({
+    required String title,
+    required String body,
+    required List<String> tokens,
+    Map<String, dynamic>? data,
+  }) async {
+    if (tokens.isEmpty) return;
+
+    print('📨 Sending push notification to ${tokens.length} devices');
+
+    for (String token in tokens) {
+      await sendPushNotification(
+        title: title,
+        body: body,
+        token: token,
+        data: data,
+      );
+    }
+  }
+
   // SEND NOTIFICATION FOR GROUP MESSAGES
   Future<void> sendMessageNotification({
     required String groupId,
@@ -233,35 +310,42 @@ class NotificationService {
     String? senderId,
   }) async {
     try {
-      final membersSnapshot = await _firebaseService.groupsCollection
-          .doc(groupId)
-          .collection('members')
-          .where(FieldPath.documentId, whereIn: recipientUserIds)
-          .get();
-
+      // Get FCM tokens for all recipients
       final List<String> tokens = [];
-      for (var member in membersSnapshot.docs) {
-        final memberData = member.data() as Map<String, dynamic>;
-        final token = memberData['fcmToken'] as String?;
-        if (token != null && member.id != senderId) {
-          tokens.add(token);
+
+      for (String userId in recipientUserIds) {
+        // Skip the sender
+        if (userId == senderId) continue;
+
+        final userDoc = await _firebaseService.usersCollection.doc(userId).get();
+        if (userDoc.exists) {
+          final userData = userDoc.data() as Map<String, dynamic>;
+          final token = userData['fcmToken'] as String?;
+          if (token != null && token.isNotEmpty) {
+            tokens.add(token);
+          }
         }
       }
 
-      for (String token in tokens) {
-        await sendPushNotification(
-          title: '💬 $groupName',
-          body: '$senderName: $message',
-          token: token,
-          data: {
-            'type': 'new_message',
-            'groupId': groupId,
-            'groupName': groupName,
-            'senderId': senderId,
-            'senderName': senderName,
-          },
-        );
+      if (tokens.isEmpty) {
+        print('No valid tokens found for recipients');
+        return;
       }
+
+      // Send push notifications
+      await sendPushNotificationToMultipleTokens(
+        title: '💬 $groupName',
+        body: '$senderName: ${message.length > 50 ? '${message.substring(0, 50)}...' : message}',
+        tokens: tokens,
+        data: {
+          'type': 'new_message',
+          'groupId': groupId,
+          'groupName': groupName,
+          'senderId': senderId,
+          'senderName': senderName,
+          'message': message,
+        },
+      );
     } catch (e) {
       print('Error sending message notification: $e');
     }
@@ -280,7 +364,7 @@ class NotificationService {
       final userData = userDoc.data() as Map<String, dynamic>?;
       final token = userData?['fcmToken'] as String?;
 
-      if (token != null) {
+      if (token != null && token.isNotEmpty) {
         await sendPushNotification(
           title: isVerified ? '✅ Verified Traveler!' : '❌ Verification Removed',
           body: isVerified
@@ -308,43 +392,71 @@ class NotificationService {
     required List<String> memberIds,
   }) async {
     try {
-      final membersSnapshot = await _firebaseService.usersCollection
-          .where(FieldPath.documentId, whereIn: memberIds)
-          .get();
+      final List<String> tokens = [];
 
-      for (var member in membersSnapshot.docs) {
-        final memberData = member.data() as Map<String, dynamic>;
-        final token = memberData['fcmToken'] as String?;
-        if (token != null) {
-          await sendPushNotification(
-            title: '✈️ Trip Update: $tripName',
-            body: updateMessage,
-            token: token,
-            data: {
-              'type': 'trip_update',
-              'tripId': tripId,
-              'tripName': tripName,
-            },
-          );
+      for (String userId in memberIds) {
+        final userDoc = await _firebaseService.usersCollection.doc(userId).get();
+        if (userDoc.exists) {
+          final userData = userDoc.data() as Map<String, dynamic>;
+          final token = userData['fcmToken'] as String?;
+          if (token != null && token.isNotEmpty) {
+            tokens.add(token);
+          }
         }
       }
+
+      if (tokens.isEmpty) return;
+
+      await sendPushNotificationToMultipleTokens(
+        title: '✈️ Trip Update: $tripName',
+        body: updateMessage,
+        tokens: tokens,
+        data: {
+          'type': 'trip_update',
+          'tripId': tripId,
+          'tripName': tripName,
+          'updateMessage': updateMessage,
+        },
+      );
     } catch (e) {
       print('Error sending trip update notification: $e');
     }
   }
 
-  // Main send method
-  Future<void> sendPushNotification({
-    required String title,
-    required String body,
-    required String token,
-    Map<String, dynamic>? data,
+  // SEND NOTIFICATION FOR JOIN REQUEST
+  Future<void> sendJoinRequestNotification({
+    required String adminId,
+    required String adminName,
+    required String requesterName,
+    required String groupId,
+    required String groupName,
+    required String tripId,
   }) async {
-    print('📨 Sending notification:');
-    print('   Token: $token');
-    print('   Title: $title');
-    print('   Body: $body');
-    print('   Data: $data');
+    try {
+      final userDoc = await _firebaseService.usersCollection.doc(adminId).get();
+      if (!userDoc.exists) return;
+
+      final userData = userDoc.data() as Map<String, dynamic>;
+      final token = userData['fcmToken'] as String?;
+
+      if (token != null && token.isNotEmpty) {
+        await sendPushNotification(
+          title: '👋 New Join Request',
+          body: '$requesterName wants to join $groupName',
+          token: token,
+          data: {
+            'type': 'join_request',
+            'groupId': groupId,
+            'groupName': groupName,
+            'tripId': tripId,
+            'requesterName': requesterName,
+            'adminId': adminId,
+          },
+        );
+      }
+    } catch (e) {
+      print('Error sending join request notification: $e');
+    }
   }
 
   // Topic subscriptions

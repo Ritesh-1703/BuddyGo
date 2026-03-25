@@ -23,6 +23,12 @@ class UserModel {
   final int totalReviews;
   bool isVerifiedTraveler;
 
+  // 🔥 NEW FIELDS
+  final DateTime? dateOfBirth;
+  final String? gender; // 'male', 'female', 'other', 'prefer_not_to_say'
+  String? fcmToken;
+  List<String>? notificationTokens;
+
   UserModel({
     required this.id,
     required this.email,
@@ -45,6 +51,10 @@ class UserModel {
     this.totalTrips = 0,
     this.totalReviews = 0,
     this.isVerifiedTraveler = false,
+    this.dateOfBirth, // 🔥 NEW
+    this.gender, // 🔥 NEW
+    this.fcmToken, // 🔥 NEW
+    this.notificationTokens, // 🔥 NEW
   })  : blockedUsers = blockedUsers ?? [],
         reportedUsers = reportedUsers ?? [],
         createdAt = createdAt ?? DateTime.now();
@@ -82,6 +92,15 @@ class UserModel {
       totalTrips: json['totalTrips'] ?? 0,
       totalReviews: json['totalReviews'] ?? 0,
       isVerifiedTraveler: json['isVerifiedTraveler'] ?? false,
+      // 🔥 NEW
+      dateOfBirth: json['dateOfBirth'] != null
+          ? (json['dateOfBirth'] as Timestamp).toDate()
+          : null,
+      gender: json['gender'],
+      fcmToken: json['fcmToken'],
+      notificationTokens: json['notificationTokens'] != null
+          ? List<String>.from(json['notificationTokens'])
+          : null,
     );
   }
 
@@ -108,6 +127,11 @@ class UserModel {
       'totalTrips': totalTrips,
       'totalReviews': totalReviews,
       'isVerifiedTraveler': isVerifiedTraveler,
+      // 🔥 NEW
+      'dateOfBirth': dateOfBirth != null ? Timestamp.fromDate(dateOfBirth!) : null,
+      'gender': gender,
+      'fcmToken': fcmToken,
+      'notificationTokens': notificationTokens,
     };
   }
 
@@ -130,6 +154,10 @@ class UserModel {
     int? totalReviews,
     bool? isVerifiedTraveler,
     DateTime? createdAt,
+    DateTime? dateOfBirth, // 🔥 NEW
+    String? gender, // 🔥 NEW
+    String? fcmToken, // 🔥 NEW
+    List<String>? notificationTokens, // 🔥 NEW
   }) {
     return UserModel(
       id: id,
@@ -153,6 +181,39 @@ class UserModel {
       totalTrips: totalTrips ?? this.totalTrips,
       totalReviews: totalReviews ?? this.totalReviews,
       isVerifiedTraveler: isVerifiedTraveler ?? this.isVerifiedTraveler,
+      // 🔥 NEW
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      gender: gender ?? this.gender,
+      fcmToken: fcmToken ?? this.fcmToken,
+      notificationTokens: notificationTokens ?? this.notificationTokens,
     );
+  }
+
+  // 🔥 Helper method to get age from date of birth
+  int? get age {
+    if (dateOfBirth == null) return null;
+    final now = DateTime.now();
+    int age = now.year - dateOfBirth!.year;
+    if (now.month < dateOfBirth!.month ||
+        (now.month == dateOfBirth!.month && now.day < dateOfBirth!.day)) {
+      age--;
+    }
+    return age;
+  }
+
+  // 🔥 Helper method to get formatted gender
+  String get formattedGender {
+    switch (gender) {
+      case 'male':
+        return 'Male';
+      case 'female':
+        return 'Female';
+      case 'other':
+        return 'Other';
+      case 'prefer_not_to_say':
+        return 'Prefer not to say';
+      default:
+        return 'Not specified';
+    }
   }
 }

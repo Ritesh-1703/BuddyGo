@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -10,6 +11,7 @@ class AuthController with ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseService _firebaseService = FirebaseService();
   final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
 
   UserModel? _currentUser;
   bool _isLoading = false;
@@ -34,6 +36,121 @@ class AuthController with ChangeNotifier {
     }
   }
 
+  // Save FCM token to Firestore
+  Future<void> _saveFCMTokenToFirestore() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return;
+
+      // Get the current FCM token
+      String? fcmToken = await _firebaseMessaging.getToken();
+
+      if (fcmToken != null) {
+        // Save token to Firestore
+        await _firebaseService.usersCollection.doc(user.uid).update({
+          'fcmToken': fcmToken,
+          'notificationTokens': FieldValue.arrayUnion([fcmToken]),
+          'lastTokenUpdate': FieldValue.serverTimestamp(),
+        });
+
+        print('✅ FCM token saved for user: ${user.uid}');
+
+        // Also update currentUser if exists
+        if (_currentUser != null) {
+          _currentUser!.fcmToken = fcmToken;
+          if (_currentUser!.notificationTokens == null) {
+            _currentUser!.notificationTokens = [];
+          }
+          if (!_currentUser!.notificationTokens!.contains(fcmToken)) {
+            _currentUser!.notificationTokens!.add(fcmToken);
+          }
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      print('❌ Error saving FCM token: $e');
+    }
+  }
+
+  // Refresh FCM token (call this when token changes)
+  Future<void> refreshFCMToken() async {
+    await _saveFCMTokenToFirestore();
+  }
+
+  // Update user profile with new fields
+  Future<void> updateProfileWithDetails({
+    String? name,
+    String? bio,
+    String? location,
+    String? studentId,
+    List<String>? interests,
+    String? phone,
+    DateTime? dateOfBirth,
+    String? gender,
+  }) async {
+    if (_currentUser == null) return;
+
+    try {
+      _setLoading(true);
+
+      final updatedUser = _currentUser!.copyWith(
+        name: name,
+        bio: bio,
+        location: location,
+        studentId: studentId,
+        interests: interests,
+        phone: phone,
+        dateOfBirth: dateOfBirth,
+        gender: gender,
+      );
+
+      final updateData = {
+        if (name != null) 'name': name,
+        if (bio != null) 'bio': bio,
+        if (location != null) 'location': location,
+        if (studentId != null) 'studentId': studentId,
+        if (interests != null) 'interests': interests,
+        if (phone != null) 'phone': phone,
+        if (dateOfBirth != null) 'dateOfBirth': Timestamp.fromDate(dateOfBirth!),
+        if (gender != null) 'gender': gender,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      await _firebaseService.updateUserProfile(
+        _currentUser!.id,
+        updateData,
+      );
+
+      _currentUser = updatedUser;
+      _setLoading(false);
+      notifyListeners();
+    } catch (e) {
+      _setLoading(false);
+      rethrow;
+    }
+  }
+
+  // Update _createUserProfile to include FCM token and new fields
+  Future<void> _createUserProfile(User firebaseUser, {DateTime? dateOfBirth, String? gender}) async {
+    // Get FCM token
+    String? fcmToken = await _firebaseMessaging.getToken();
+
+    final userModel = UserModel(
+      id: firebaseUser.uid,
+      email: firebaseUser.email ?? '',
+      name: firebaseUser.displayName,
+      photoUrl: firebaseUser.photoURL,
+      isEmailVerified: firebaseUser.emailVerified,
+      dateOfBirth: dateOfBirth,
+      gender: gender,
+      fcmToken: fcmToken,
+      notificationTokens: fcmToken != null ? [fcmToken] : [],
+    );
+
+    await _firebaseService.createUserProfile(userModel);
+    _currentUser = userModel;
+  }
+
   Future<void> _loadCurrentUser() async {
     final user = _auth.currentUser;
     if (user != null) {
@@ -48,20 +165,7 @@ class AuthController with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _createUserProfile(User firebaseUser) async {
-    final userModel = UserModel(
-      id: firebaseUser.uid,
-      email: firebaseUser.email ?? '',
-      name: firebaseUser.displayName,
-      photoUrl: firebaseUser.photoURL,
-      isEmailVerified: firebaseUser.emailVerified,
-    );
-
-    await _firebaseService.createUserProfile(userModel);
-    _currentUser = userModel;
-  }
-
-  // 🔥 NEW: Forgot Password - Send reset email
+  // NEW: Forgot Password - Send reset email
   Future<bool> sendPasswordResetEmail(String email) async {
     try {
       _setLoading(true);
@@ -90,29 +194,13 @@ class AuthController with ChangeNotifier {
     }
   }
 
-  // 🔥 NEW: Clear reset password message
+  // NEW: Clear reset password message
   void clearResetPasswordMessage() {
     _resetPasswordMessage = null;
     notifyListeners();
   }
 
-  // Future<bool> signInWithEmail(String email, String password) async {
-  //   try {
-  //     _setLoading(true);
-  //     final result = await _auth.signInWithEmailAndPassword(
-  //       email: email,
-  //       password: password,
-  //     );
-  //
-  //     await _saveLoginStatus(true);
-  //     await _loadCurrentUser();
-  //     _setLoading(false);
-  //     return true;
-  //   } catch (e) {
-  //     _setLoading(false);
-  //     return false;
-  //   }
-  // }
+  // Updated signInWithEmail with email verification check
   Future<bool> signInWithEmail(String email, String password) async {
     try {
       _setLoading(true);
@@ -127,7 +215,6 @@ class AuthController with ChangeNotifier {
       await user?.reload();
 
       if (user != null && !user.emailVerified) {
-
         await _auth.signOut();
         _setLoading(false);
 
@@ -140,6 +227,9 @@ class AuthController with ChangeNotifier {
       await _saveLoginStatus(true);
       await _loadCurrentUser();
 
+      // Save FCM token after successful login
+      await _saveFCMTokenToFirestore();
+
       _setLoading(false);
       return true;
 
@@ -149,25 +239,14 @@ class AuthController with ChangeNotifier {
     }
   }
 
-  // Future<bool> signUpWithEmail(String email, String password, String name) async {
-  //   try {
-  //     _setLoading(true);
-  //     final result = await _auth.createUserWithEmailAndPassword(
-  //       email: email,
-  //       password: password,
-  //     );
-  //
-  //     await result.user?.updateDisplayName(name);
-  //     await _createUserProfile(result.user!);
-  //     await _saveLoginStatus(true);
-  //     _setLoading(false);
-  //     return true;
-  //   } catch (e) {
-  //     _setLoading(false);
-  //     return false;
-  //   }
-  // }
-  Future<bool> signUpWithEmail(String email, String password, String name) async {
+  // Updated signUpWithEmail to include new fields
+  Future<bool> signUpWithEmail({
+    required String email,
+    required String password,
+    required String name,
+    DateTime? dateOfBirth,
+    String? gender,
+  }) async {
     try {
       _setLoading(true);
 
@@ -178,6 +257,23 @@ class AuthController with ChangeNotifier {
 
       // Set display name
       await result.user?.updateDisplayName(name);
+
+      // Get FCM token
+      String? fcmToken = await _firebaseMessaging.getToken();
+
+      // Create user profile with all fields
+      final userModel = UserModel(
+        id: result.user!.uid,
+        email: email,
+        name: name,
+        isEmailVerified: false,
+        dateOfBirth: dateOfBirth,
+        gender: gender,
+        fcmToken: fcmToken,
+        notificationTokens: fcmToken != null ? [fcmToken] : [],
+      );
+
+      await _firebaseService.createUserProfile(userModel);
 
       // Send verification email
       await result.user?.sendEmailVerification();
@@ -195,6 +291,7 @@ class AuthController with ChangeNotifier {
     }
   }
 
+  // Updated signInWithGoogle to include FCM token
   Future<bool> signInWithGoogle() async {
     try {
       _setLoading(true);
@@ -212,12 +309,41 @@ class AuthController with ChangeNotifier {
 
       final result = await _auth.signInWithCredential(credential);
 
+      // Get FCM token
+      String? fcmToken = await _firebaseMessaging.getToken();
+
       // Check if user exists
       final existingUser = await _firebaseService.getUserProfile(result.user!.uid);
       if (existingUser == null) {
-        await _createUserProfile(result.user!);
+        // Create new user with FCM token
+        final userModel = UserModel(
+          id: result.user!.uid,
+          email: result.user!.email ?? '',
+          name: result.user!.displayName,
+          photoUrl: result.user!.photoURL,
+          isEmailVerified: result.user!.emailVerified,
+          fcmToken: fcmToken,
+          notificationTokens: fcmToken != null ? [fcmToken] : [],
+        );
+        await _firebaseService.createUserProfile(userModel);
+        _currentUser = userModel;
       } else {
+        // Update existing user with new FCM token
         _currentUser = existingUser;
+        await _firebaseService.usersCollection.doc(result.user!.uid).update({
+          'fcmToken': fcmToken,
+          'notificationTokens': FieldValue.arrayUnion([fcmToken]),
+          'lastTokenUpdate': FieldValue.serverTimestamp(),
+        });
+
+        // Update currentUser
+        _currentUser!.fcmToken = fcmToken;
+        if (_currentUser!.notificationTokens == null) {
+          _currentUser!.notificationTokens = [];
+        }
+        if (!_currentUser!.notificationTokens!.contains(fcmToken)) {
+          _currentUser!.notificationTokens!.add(fcmToken!);
+        }
       }
 
       await _saveLoginStatus(true);
@@ -229,6 +355,7 @@ class AuthController with ChangeNotifier {
     }
   }
 
+  // Updated updateProfile to include new fields
   Future<void> updateProfile({
     String? name,
     String? bio,
@@ -236,6 +363,8 @@ class AuthController with ChangeNotifier {
     String? studentId,
     List<String>? interests,
     String? phone,
+    DateTime? dateOfBirth,
+    String? gender,
   }) async {
     if (_currentUser == null) return;
 
@@ -249,19 +378,25 @@ class AuthController with ChangeNotifier {
         studentId: studentId,
         interests: interests,
         phone: phone,
+        dateOfBirth: dateOfBirth,
+        gender: gender,
       );
+
+      final updateData = {
+        if (name != null) 'name': name,
+        if (bio != null) 'bio': bio,
+        if (location != null) 'location': location,
+        if (studentId != null) 'studentId': studentId,
+        if (interests != null) 'interests': interests,
+        if (phone != null) 'phone': phone,
+        if (dateOfBirth != null) 'dateOfBirth': Timestamp.fromDate(dateOfBirth!),
+        if (gender != null) 'gender': gender,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
 
       await _firebaseService.updateUserProfile(
         _currentUser!.id,
-        {
-          if (name != null) 'name': name,
-          if (bio != null) 'bio': bio,
-          if (location != null) 'location': location,
-          if (studentId != null) 'studentId': studentId,
-          if (interests != null) 'interests': interests,
-          if (phone != null) 'phone': phone,
-          'updatedAt': FieldValue.serverTimestamp(),
-        },
+        updateData,
       );
 
       _currentUser = updatedUser;
@@ -273,7 +408,24 @@ class AuthController with ChangeNotifier {
     }
   }
 
+  // Updated signOut to remove FCM token
   Future<void> signOut() async {
+    // Remove FCM token before signing out
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        String? fcmToken = await _firebaseMessaging.getToken();
+        if (fcmToken != null) {
+          await _firebaseService.usersCollection.doc(user.uid).update({
+            'fcmToken': FieldValue.delete(),
+            'notificationTokens': FieldValue.arrayRemove([fcmToken]),
+          });
+        }
+      }
+    } catch (e) {
+      print('Error removing FCM token: $e');
+    }
+
     await _auth.signOut();
     await _googleSignIn.signOut();
     await _saveLoginStatus(false);

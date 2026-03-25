@@ -81,7 +81,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate:
-          _selectedDate ??
+      _selectedDate ??
           DateTime.now().subtract(const Duration(days: 365 * 18)),
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
@@ -324,13 +324,13 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 decoration: BoxDecoration(
                                   gradient: isSelected
                                       ? LinearGradient(
-                                          colors: [
-                                            RegisterColors.tertiary,
-                                            RegisterColors.success,
-                                          ],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        )
+                                    colors: [
+                                      RegisterColors.tertiary,
+                                      RegisterColors.success,
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  )
                                       : null,
                                   color: isSelected ? null : Colors.grey[50],
                                   borderRadius: BorderRadius.circular(30),
@@ -342,13 +342,13 @@ class _RegisterScreenState extends State<RegisterScreen>
                                   ),
                                   boxShadow: isSelected
                                       ? [
-                                          BoxShadow(
-                                            color: RegisterColors.tertiary
-                                                .withOpacity(0.3),
-                                            blurRadius: 10,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ]
+                                    BoxShadow(
+                                      color: RegisterColors.tertiary
+                                          .withOpacity(0.3),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ]
                                       : null,
                                 ),
                                 child: Text(
@@ -552,7 +552,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                       ),
                       onPressed: () {
                         setState(
-                          () => _showConfirmPassword = !_showConfirmPassword,
+                              () => _showConfirmPassword = !_showConfirmPassword,
                         );
                       },
                     ),
@@ -654,10 +654,13 @@ class _RegisterScreenState extends State<RegisterScreen>
                             return;
                           }
 
+                          // 🔥 UPDATED: Call signUpWithEmail with named parameters
                           final success = await authController.signUpWithEmail(
-                            _emailController.text.trim(),
-                            _passwordController.text,
-                            _nameController.text.trim(),
+                            email: _emailController.text.trim(),
+                            password: _passwordController.text,
+                            name: _nameController.text.trim(),
+                            dateOfBirth: _selectedDate,
+                            gender: _selectedGender?.toLowerCase(), // Convert to lowercase for consistency
                           );
 
                           if (success && context.mounted) {
@@ -678,7 +681,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 title: const Text("Verify your email"),
                                 content: Text(
                                   "A verification email has been sent to ${_emailController.text}. "
-                                  "Please verify your email before logging in.",
+                                      "Please verify your email before logging in.",
                                 ),
                                 actions: [
                                   TextButton(
@@ -698,22 +701,22 @@ class _RegisterScreenState extends State<RegisterScreen>
                       child: Center(
                         child: authController.isLoading
                             ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
                             : Text(
-                                'Create Account',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
+                          'Create Account',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
                       ),
                     ),
                   ),

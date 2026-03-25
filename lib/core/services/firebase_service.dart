@@ -9,6 +9,7 @@ import 'package:buddygoapp/features/user/data/user_model.dart';
 import '../../features/groups/data/group_model.dart';
 import '../../features/notifications/data/notification_model.dart';
 import '../../features/safety/data/report_model.dart';
+import 'notification_service.dart';
 
 class FirebaseService {
   static final FirebaseService _instance = FirebaseService._internal();
@@ -825,15 +826,69 @@ class FirebaseService {
         tripName: tripName,
       );
 
+      // Save to Firestore
       await usersCollection
           .doc(userId)
           .collection('notifications')
           .doc(notificationId)
           .set(notification.toJson());
 
-      print('✅ Notification created for user: $userId');
+      // 🔥 SEND PUSH NOTIFICATION 🔥
+      await _sendPushNotification(
+        userId: userId,
+        title: title,
+        body: body,
+        type: type,
+        data: data,
+        notificationId: notificationId,
+      );
+
+      print('✅ Notification created and push sent to user: $userId');
     } catch (e) {
       print('❌ Error creating notification: $e');
+    }
+  }
+
+// Add this helper method to send push notifications
+  Future<void> _sendPushNotification({
+    required String userId,
+    required String title,
+    required String body,
+    required NotificationType type,
+    Map<String, dynamic>? data,
+    required String notificationId,
+  }) async {
+    try {
+      // Get user's FCM token from Firestore
+      final userDoc = await usersCollection.doc(userId).get();
+      if (!userDoc.exists) {
+        print('User document not found for userId: $userId');
+        return;
+      }
+
+      final userData = userDoc.data() as Map<String, dynamic>;
+      final fcmToken = userData['fcmToken'] as String?;
+
+      if (fcmToken == null || fcmToken.isEmpty) {
+        print('No FCM token found for user: $userId');
+        return;
+      }
+
+      // Send push notification using NotificationService
+      await NotificationService().sendPushNotification(
+        title: title,
+        body: body,
+        token: fcmToken,
+        data: {
+          'type': type.toString().split('.').last,
+          'notificationId': notificationId,
+          ...?data,
+        },
+      );
+
+      print('✅ Push notification sent to user: $userId');
+    } catch (e) {
+      print('❌ Error sending push notification: $e');
     }
   }
 
@@ -1056,6 +1111,111 @@ class FirebaseService {
 
   Future<void> deleteUserAccount(String userId) async {
     await usersCollection.doc(userId).delete();
+  }
+
+  // Add this method to FirebaseService class
+  Future<void> markMessagesAsRead(String groupId, String userId) async {
+    try {
+      // Get all messages in the group
+      final allMessages = await chatsCollection
+          .where('groupId', isEqualTo: groupId)
+          .get();
+
+      if (allMessages.docs.isEmpty) return;
+
+      final batch = _firestore.batch();
+      int updateCount = 0;
+
+      for (var doc in allMessages.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final readBy = List<String>.from(data['readBy'] ?? []);
+        final messageUserId = data['userId'] as String?;
+
+        // Mark as read if user hasn't read it and didn't send it
+        if (!readBy.contains(userId) && messageUserId != userId) {
+          batch.update(doc.reference, {
+            'readBy': FieldValue.arrayUnion([userId]),
+          });
+          updateCount++;
+        }
+      }
+
+      if (updateCount > 0) {
+        await batch.commit();
+        print('✅ Marked $updateCount messages as read in group: $groupId');
+      }
+    } catch (e) {
+      print('❌ Error marking messages as read: $e');
+    }
+  }
+
+
+  /// Get unread count for a specific group
+  Future<int> getUnreadCountForGroup({
+    required String groupId,
+    required String userId,
+  }) async {
+    try {
+      final messages = await chatsCollection
+          .where('groupId', isEqualTo: groupId)
+          .get();
+
+      int unreadCount = 0;
+
+      for (var doc in messages.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final readBy = List<String>.from(data['readBy'] ?? []);
+        final messageUserId = data['userId'] as String?;
+
+        if (!readBy.contains(userId) && messageUserId != userId) {
+          unreadCount++;
+        }
+      }
+
+      return unreadCount;
+    } catch (e) {
+      print('Error getting unread count: $e');
+      return 0;
+    }
+  }
+
+  /// Get unread counts for all user's groups
+  Future<Map<String, int>> getAllUnreadCounts(String userId) async {
+    final Map<String, int> unreadCounts = {};
+
+    try {
+      // Get all groups user is a member of
+      final groups = await groupsCollection
+          .where('memberIds', arrayContains: userId)
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      for (var groupDoc in groups.docs) {
+        final groupId = groupDoc.id;
+        final messages = await chatsCollection
+            .where('groupId', isEqualTo: groupId)
+            .get();
+
+        int unreadCount = 0;
+        for (var msgDoc in messages.docs) {
+          final data = msgDoc.data() as Map<String, dynamic>;
+          final readBy = List<String>.from(data['readBy'] ?? []);
+          final messageUserId = data['userId'] as String?;
+
+          if (!readBy.contains(userId) && messageUserId != userId) {
+            unreadCount++;
+          }
+        }
+
+        if (unreadCount > 0) {
+          unreadCounts[groupId] = unreadCount;
+        }
+      }
+    } catch (e) {
+      print('Error getting all unread counts: $e');
+    }
+
+    return unreadCounts;
   }
 
   // Get current user ID
