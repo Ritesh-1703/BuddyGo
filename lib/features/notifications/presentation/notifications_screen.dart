@@ -134,10 +134,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> with TickerPr
               ),
             ],
           ),
-          child: IconButton(
-            icon: Icon(Icons.arrow_back, color: NotificationColors.primary),
-            onPressed: () => Navigator.pop(context),
-          ),
         ),
         title: Text(
           'Notifications',

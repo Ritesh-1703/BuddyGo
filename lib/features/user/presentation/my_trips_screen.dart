@@ -141,6 +141,7 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
     return Scaffold(
       backgroundColor: TripColors.background,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: Colors.white,
         elevation: 0,
         leading: Container(
@@ -155,10 +156,6 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
                 offset: const Offset(0, 4),
               ),
             ],
-          ),
-          child: IconButton(
-            icon: Icon(Icons.arrow_back, color: TripColors.primary),
-            onPressed: () => Navigator.pop(context),
           ),
         ),
         title: Text(
